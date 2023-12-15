@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/730332035.svg)](https://zenodo.org/doi/10.5281/zenodo.10390330)
+
 # Pandora
 
 Pandora is a symbolic execution tool designed for *truthful* validation of Intel SGX enclave shielding runtimes. Pandora is based on the fabulous [angr](https://angr.io/) and extends it with enclave semantics such as Intel SGX instruction support, a realistic enclave memory view, attacker taint tracking, and report generation for a set of powerful vulnerability plugins.
