@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Alder"
+  given-names: "Fritz"
+  orcid: "https://orcid.org/0000-0001-9607-7798"
+- family-names: "Daniel"
+  given-names: "Lesly-Ann"
+  orcid: "https://orcid.org/0000-0002-2772-3722"
+- family-names: "Oswald"
+  given-names: "David"
+  orcid: "https://orcid.org/0000-0001-8524-5282"
+- family-names: "Piessens"
+  given-names: "Frank"
+  orcid: "https://orcid.org/0000-0001-5438-153X"
+- family-names: "Van Bulck"
+  given-names: "Jo"
+  orcid: "https://orcid.org/0000-0002-5953-9196"
+title: "Pandora: Principled Symbolic Validation of Intel SGX Enclave Runtimes"
+version: 1.0.0
+# doi: 10.5281/zenodo.1234
+date-released: 2023-12-15
+url: "https://github.com/pandora-tee/pandora"
