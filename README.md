@@ -4,11 +4,9 @@
 
 Pandora is a symbolic execution tool designed for *truthful* validation of Intel SGX enclave shielding runtimes. Pandora is based on the fabulous [angr](https://angr.io/) and extends it with enclave semantics such as Intel SGX instruction support, a realistic enclave memory view, attacker taint tracking, and report generation for a set of powerful vulnerability plugins.
 
-Pandora is the result of our research publication at the 45th IEEE Symposium on Security and Privacy (IEEE S&P 2024) and should be cited as:
-
+Pandora is the result of our research publication [you can read here](https://falder.org/files/paper/2024_pandora.pdf) and is published at the 45th IEEE Symposium on Security and Privacy (IEEE S&P 2024). It should be cited as:
 
 > Alder, F., Daniel, L. A., Oswald, D., Piessens, F., & Van Bulck, J. (2024, May). Pandora: Principled Symbolic Validation of Intel SGX Enclave Runtimes. In 45th IEEE Symposium on Security and Privacy-IEEE S&P 2024. IEEE.
-
 
 Bibtex:
 
