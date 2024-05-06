@@ -30,18 +30,24 @@ pip3 install -r requirements.txt
 # Good CLI hopefully makes it easy for you to get started
 ./pandora.py --help
 
-# The run script executes Pandora on an elf file or a binary
+# The run script executes Pandora on an ELF file or a binary
 ./pandora.py run --help
 
-# There are some heuritics to figure out what binary you are giving. 
-# Easiest example: The linux selftest enclave (assuming the examples folder exists):
-./pandora.py run ../pandora-examples/linux-selftest/linux_test_encl.elf
+# Easiest example: clone and compile the standalone Linux selftest enclave
+cd ..
+git clone https://github.com/pandora-tee/pandora-examples.git
+cd pandora-examples/linux-sgx-selftest/
+make
+cd ../../pandora/
+
+# Now analyze the Linux selftest enclave binary
+./pandora.py run ../pandora-examples/linux-sgx-selftest/linux_test_encl.elf
 
 # When you start playing around, start using the debugging config file
 # This makes sure to not always write new HTML and json reports, but overwrites old reports
 #  --> Less wasted disk space while you hack around
 # You can also control color schemes in these config files! This one works well for our dark modes.
-./pandora.py run -c config-debugging.ini ../pandora-examples/linux-selftest/linux_test_encl.elf
+./pandora.py run -c config-debugging.ini ../pandora-examples/linux-sgx-selftest/linux_test_encl.elf
 
 # More tricky example: An sgx-tracer dump, by giving the -s dump option:
 ./pandora.py run -c config-debugging.ini ../pandora-examples/intel-sdk/bin-and-sgxtrace/sgx_2.19.enclave.dump -s dump
@@ -52,13 +58,13 @@ pip3 install -r requirements.txt
 
 # You can also control Pandora's behavior
 # Only do 20 steps:
-./pandora.py run -c config-debugging.ini ../pandora-examples/linux-selftest/linux_test_encl.elf -n 20
+./pandora.py run -c config-debugging.ini ../pandora-examples/linux-sgx-selftest/linux_test_encl.elf -n 20
 
 # Wait for user input before starting (e.g. to verify everything is loaded correctly)
-./pandora.py run -c config-debugging.ini ../pandora-examples/linux-selftest/linux_test_encl.elf -a start=break
+./pandora.py run -c config-debugging.ini ../pandora-examples/linux-sgx-selftest/linux_test_encl.elf -a start=break
 
 # Spawn a shell on every pointer sanitization issue
-./pandora.py run -c config-debugging.ini ../pandora-examples/linux-selftest/linux_test_encl.elf -a ptr=shell
+./pandora.py run -c config-debugging.ini ../pandora-examples/linux-sgx-selftest/linux_test_encl.elf -a ptr=shell
 
 # There are more options that can be set like depth-first search and allowing enclave reentries. Check the help how to do that.
 ```
