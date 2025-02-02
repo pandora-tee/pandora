@@ -50,7 +50,7 @@ class ControlFlowTracker(ExplorationTechnique):
                 if len(bbl_addrs) > 0:
                     ui.log_format.dump_asm(s.history.parent, logger, logging.ERROR,
                                            header_msg="Assembly code of the removed state before the jump:",
-                                           use_rip=bbl_addrs[-1],
+                                           use_ip=bbl_addrs[-1],
                                            angr_project=s.project) # Pass the project of the state since history doesn't have it
 
                 # Send this as a system event to the reporter to log it properly
@@ -59,7 +59,7 @@ class ControlFlowTracker(ExplorationTechnique):
                 if buffer_entirely_inside_enclave(s, ip, 15):
                     extra_sec = {'Execution state info': [(
                                  'Disassembly of jump target (not executed)',
-                                 ui.log_format.format_asm(s, formatting=None, angr_project=s.project, use_rip=ip),
+                                 ui.log_format.format_asm(s, formatting=None, angr_project=s.project, use_ip=ip),
                                  'verbatim'
                     )]}
                 ty =  'unmeasured and uninitialized' if unmeasured_tainted else 'non-executable'

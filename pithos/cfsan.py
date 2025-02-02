@@ -164,9 +164,9 @@ def _report_error(
      Reports error to the reporter. Appends useful information such as address range and data if available.
      """
     reporter = Reporter()
-    rip = state.scratch.ins_addr  # get_reg_value(state, 'rip') <- this one returns the pc after the call!
-    symbol = state.project.loader.find_symbol(rip, fuzzy=True)
-    unique = symbol not in reporter.plugins[shortname]['rip']
+    ip = state.scratch.ins_addr  # get_reg_value(state, 'ip') <- this one returns the pc after the call!
+    symbol = state.project.loader.find_symbol(ip, fuzzy=True)
+    unique = symbol not in reporter.plugins[shortname]['ip']
 
     # NOTE: we explicitly call the constraint solver here; this is okay as the
     # fast path should normally only save reports in rare and relevant cases
@@ -191,7 +191,7 @@ def _report_error(
     if not symbolic:
         extra_sec = {'Execution state info': [(
                  'Disassembly of jump target (not executed)',
-                 format_asm(state, formatting=None, angr_project=state.project, use_rip=target),
+                 format_asm(state, formatting=None, angr_project=state.project, use_ip=target),
                  'verbatim'
         )]}
 

@@ -19,7 +19,7 @@ def eenter(eenter_state):
     From Intel SDM:
         > The ENCLU[EENTER] instruction transfers execution to an enclave.
         > At the end of the instruction, the logical processor is executing
-        > in enclave mode at the RIP computed as EnclaveBase + TCS.OENTRY.
+        > in enclave mode at the IP computed as EnclaveBase + TCS.OENTRY.
 
         > RBX = Address of a TCS
         > RCX = Address of IP following EENTER

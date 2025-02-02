@@ -83,7 +83,7 @@ class HookerManager:
         addr = SymbolManager().symbol_to_addr(name)
         if addr is not None:
             logger.debug(ui.log_format.format_fields(f'hooking function <{name}> at {addr:#x}'))
-            logger.debug(ui.log_format.format_asm(self.init_state, use_rip=addr))
+            logger.debug(ui.log_format.format_asm(self.init_state, use_ip=addr))
         return addr
 
     def hook_mem_region(self, addr, size):

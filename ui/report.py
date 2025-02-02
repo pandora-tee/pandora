@@ -130,7 +130,7 @@ class Reporter(metaclass=Singleton):
         """
         Registers a plugin by appending a plugin entry to the log.
         """
-        self.plugins[shortname] = {'name': name, 'rip': defaultdict(set)}
+        self.plugins[shortname] = {'name': name, 'ip': defaultdict(set)}
 
         plugin_data = {
             'type': JsonEntryId.ENTRY_ID_PLUGIN,
@@ -151,21 +151,21 @@ class Reporter(metaclass=Singleton):
         """
         for shortname, plug in self.plugins.items():
             lvl_summaries = []
-            pretty_rips = {}
-            rip = plug['rip']
+            pretty_ips = {}
+            ip = plug['ip']
             name = plug['name']
-            for sev, rips in rip.items():
-                num = len(rips)
+            for sev, ips in ip.items():
+                num = len(ips)
                 lvl = f'{format_log_level(num, sev)} unique {format_log_level(sev, sev)} issue{"s" if num > 1 else ""}'
                 lvl_summaries.append(lvl)
-                pretty_rips[sev] = '; '.join([f"'{info}' at {rip:#x}" for (rip, info) in rips])
+                pretty_ips[sev] = '; '.join([f"'{info}' at {ip:#x}" for (ip, info) in ips])
 
             issues = f'{"; ".join(lvl_summaries)}.' if lvl_summaries else 'no issues.'
 
             log_always(logger, format_header(f'\n{name} summary:') + f' {name} reported {issues}')
 
             if lvl_summaries:
-                log_always(logger, format_table(pretty_rips, key_hdr='Severity', val_hdr=f'Reports by {name}'))
+                log_always(logger, format_table(pretty_ips, key_hdr='Severity', val_hdr=f'Reports by {name}'))
 
         self.file.write(json.dumps({"type": JsonEntryId.ENTRY_ID_METADATA,
                                     "stop_timestamp": datetime.datetime.now().timestamp()}))
@@ -182,7 +182,7 @@ class Reporter(metaclass=Singleton):
 
         for shortname, plug in self.plugins.items():
             # Map the dict as a length of each value
-            lvl_summaries = defaultdict(int, dict(map(lambda x: (x[0], len(x[1])), plug['rip'].items())))
+            lvl_summaries = defaultdict(int, dict(map(lambda x: (x[0], len(x[1])), plug['ip'].items())))
 
             # And get a tuple from that in the order (critical, warning, debug)
             lvl_tuple = (lvl_summaries[logging.getLevelName(logging.CRITICAL)],
@@ -227,36 +227,36 @@ class Reporter(metaclass=Singleton):
 
         # NOTE: Be careful to use get_reg here and disable actions and inspect!
         # Otherwise, the breakpoint will fire again and we get very weird results!
-        # rip = get_reg_value(state, 'rip', disable_actions=True, inspect=False)
-        # The above does not work for calls because rip is already set to call target!
+        # ip = get_reg_value(state, 'ip', disable_actions=True, inspect=False)
+        # The above does not work for calls because ip is already set to call target!
         # Below seems more robust?
-        rip = state.scratch.ins_addr if state.scratch.ins_addr is not None else state.solver.eval_one(state.regs.ip)
+        ip = state.scratch.ins_addr if state.scratch.ins_addr is not None else state.solver.eval_one(state.regs.ip)
 
         # print short info on terminal
-        rip_info = f'@{rip:#x}: ' + info
+        ip_info = f'@{ip:#x}: ' + info
 
         if only_once or pandora_options.PandoraOptions().get_option(pandora_options.PANDORA_REPORT_ONLY_UNIQUE):
-            # Abort early if we are in only once mode and already know this info at that rip
-            if rip_info in self.unique_issues[plugin_shortname]:
-                callee_logger.log(severity, f"Ignoring issue because it is already logged: {format_inline_header(rip_info)}")
+            # Abort early if we are in only once mode and already know this info at that ip
+            if ip_info in self.unique_issues[plugin_shortname]:
+                callee_logger.log(severity, f"Ignoring issue because it is already logged: {format_inline_header(ip_info)}")
                 return
             else:
-                self.unique_issues[plugin_shortname].add(rip_info)
+                self.unique_issues[plugin_shortname].add(ip_info)
 
         if severity > logging.INFO:
             callee_logger.log(severity, '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            callee_logger.log(severity, f'!!!! {rip_info:^72} !!!!')
+            callee_logger.log(severity, f'!!!! {ip_info:^72} !!!!')
             callee_logger.log(severity, '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         else:
-            callee_logger.log(severity, rip_info)
+            callee_logger.log(severity, ip_info)
 
         if severity < self.reporter_level:
             # Early out if the reported severity is to be ignored by the reporter.
             callee_logger.log(severity, 'Not writing this issue to report since it is below the report-level.')
         else:
             # We seem to be ready for report writing. Prepare the item and write it to file.
-            sym = SymbolManager().get_symbol(rip)
-            self.plugins[plugin_shortname]['rip'][logging.getLevelName(severity)].add((rip, info))
+            sym = SymbolManager().get_symbol(ip)
+            self.plugins[plugin_shortname]['ip'][logging.getLevelName(severity)].add((ip, info))
 
             if pandora_options.PandoraOptions().get_option(pandora_options.PANDORA_REPORT_OMIT_ATTACKER_CONSTRAINTS):
                 attacker_constraints = ''
@@ -266,12 +266,12 @@ class Reporter(metaclass=Singleton):
             report_element = {
                 "type": JsonEntryId.ENTRY_ID_DATA,
                 "plugin": plugin_shortname,
-                "rip": rip,
+                "ip": ip,
                 "symbol": sym,
                 "info": info,
                 "severity": severity,
                 "backtrace": get_state_backtrace_formatted(state),
-                "asm": format_asm(state, highlight_rip=rip),
+                "asm": format_asm(state, highlight_ip=ip),
                 "registers": format_regs(state),
                 "constraints": attacker_constraints,
                 "extra": {str(k): str(v) for k, v in extra_info.items()},

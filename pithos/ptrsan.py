@@ -191,9 +191,9 @@ def _report_error(
         addr = state.solver.BVV(addr, 64)
 
     reporter = Reporter()
-    rip = get_reg_value(state, 'rip')
-    symbol = state.project.loader.find_symbol(rip, fuzzy=True)
-    unique = symbol not in reporter.plugins[shortname]['rip']
+    ip = get_reg_value(state, 'ip')
+    symbol = state.project.loader.find_symbol(ip, fuzzy=True)
+    unique = symbol not in reporter.plugins[shortname]['ip']
 
     # Send this event to reporter
     addr_max = state.solver.max(addr)

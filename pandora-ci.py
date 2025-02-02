@@ -62,7 +62,7 @@ def run_ci(ctx : CIContext, config):
         logger.info(f'Running Pandora {len(ci_binaries)} times.')
 
         base_path = Path(os.path.dirname(__file__)).resolve()
-        examples_folder = (base_path.parent / 'runtime-dumps').resolve().as_posix()
+        examples_folder = (base_path.parent / 'pandora-examples').resolve().as_posix()
         # Start creating tasks
         task_list = []
         task_counter = 0
@@ -232,7 +232,7 @@ def check(ctx: CIContext, base_config_path='', ci_config_path=''):
         # Loop through issues lists and find differences
         index = 0
         max_common_index = min(len(baseline_issues), len(ci_issues))
-        to_check = ['plugin', 'rip', 'symbol', 'info', 'severity', 'registers', 'backtrace', 'asm', 'extra']
+        to_check = ['plugin', 'ip', 'symbol', 'info', 'severity', 'registers', 'backtrace', 'asm', 'extra']
         while index < max_common_index:
             num_diffs = compare_and_report(to_check, baseline_issues, ci_issues, index, logging.INFO)
             if num_diffs > 0:

@@ -61,7 +61,7 @@ class PandoraContext:
     sdk_detection_type: str
     actions: List[str]
     report_fmt: str
-    report_max_rips: int
+    report_max_ips: int
     with_cfg: bool
     # Options for enclave memory dumps
     sdk_elf_file: Path
@@ -358,7 +358,7 @@ def pandora_report(pandora_ctx: PandoraContext, log_path: Path):
     console.print(f'{log_format.format_header("Pandora")}: Working on log file {log_format.format_warning(log_path)}.')
     with open(log_path, 'r') as f:
         data = json.load(f)
-    report_formatter = ReportFormatter(data, pandora_ctx.report_fmt, pandora_ctx.report_level, pandora_ctx.report_max_rips)
+    report_formatter = ReportFormatter(data, pandora_ctx.report_fmt, pandora_ctx.report_level, pandora_ctx.report_max_ips)
     report_formatter.write_reports()
 
 
@@ -622,9 +622,9 @@ def main_callback(
             help="Define the format for all plugin reports.",
             rich_help_panel="Report generation"
         ),
-        report_max_rips: int = typer.Option(
-            0, "--report-rips",
-            help="Maximum number of duplicate reports per unique RIP for all plugin HTML reports. 0 or negative to report all.",
+        report_max_ips: int = typer.Option(
+            0, "--report-ips",
+            help="Maximum number of duplicate reports per unique IP for all plugin HTML reports. 0 or negative to report all.",
             rich_help_panel="Report generation"
         ),
         with_cfg: bool = typer.Option(
