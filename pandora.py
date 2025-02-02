@@ -115,7 +115,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
 
         # Load binary in angr and initialize the state. Load binary with offset defined by detected SDK
         my_explorer = BasicBlockExplorer(binary_path, action_mgr.actions['explorer'],
-                                                  sdk_mgr.get_base_addr(), angr_backend=sdk_mgr.get_angr_backend())
+                                                  sdk_mgr.get_load_addr(), angr_backend=sdk_mgr.get_angr_backend(), angr_arch=sdk_mgr.get_angr_arch())
         init_state = my_explorer.get_init_state()
 
         # Initialize sdk with specific initial state

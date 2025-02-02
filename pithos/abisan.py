@@ -51,6 +51,11 @@ class ABISanitizationPlugin(BasePlugin):
     def get_help_text():
         return 'Validates CPU register sanitizations.'
 
+    @staticmethod
+    def supports_arch(angr_arch):
+        #TODO this plugin can probably be refactored to be (more) architecture independent
+        return angr_arch == 'x86_64'
+
     def init_globals(self):
         global abi_action, reporter, abi_shortname
         abi_action = self.action

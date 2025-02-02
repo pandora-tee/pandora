@@ -7,33 +7,13 @@ from angr import BP_BEFORE, BP_AFTER, SimValueError
 
 from sdks.SDKManager import SDKManager
 from explorer import taint
-from sdks.common import SgxSsaGpr
-from utilities.angr_helper import get_reg_value, set_memory_value, set_reg_value, get_reg_size
+from utilities.angr_helper import set_reg_value, get_reg_size
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
 # TODO some sanity checks here would help catching sdk bugs: e.g., assert tcs_addr in enclave range(!)
 def eenter(eenter_state):
-    """
-    From Intel SDM:
-        > The ENCLU[EENTER] instruction transfers execution to an enclave.
-        > At the end of the instruction, the logical processor is executing
-        > in enclave mode at the IP computed as EnclaveBase + TCS.OENTRY.
-
-        > RBX = Address of a TCS
-        > RCX = Address of IP following EENTER
-
-        > EAX = TCS.CSSA
-        > FS  = TCS.OFSBASE
-        > GS  = TCS.GSBASE
-
-    In Intel SDK the entry code looks like this (sample)
-    https://github.com/intel/linux-sgx/blob/effae6280234302a12169f89c561b96e54d80723/sdk/trts/linux/trts_pic.S#L95
-
-    NOTE: We leave RCX symbolic as we're not interested in executing the
-          untrusted runtime.
-    """
     logger.info(f' --- Initializing state and making it ready for eenter.')
 
     # First, call the eenter breakpoint
@@ -45,10 +25,6 @@ def eenter(eenter_state):
     # Start the setup by marking the state global as not active. This should disable all breakpoints like tainting
     eenter_state.globals['pandora_active'] = False
 
-    # Get tcs_struct and addr from SDK manager
-    tcs_struct = SDKManager().get_tcs_struct()
-    tcs_addr = SDKManager().get_tcs_addr()
-
     # Initialize all registers as being attacker tainted
     for reg_name in eenter_state.project.arch.register_names.values():
         size = get_reg_size(eenter_state, reg_name)
@@ -56,33 +32,10 @@ def eenter(eenter_state):
         set_reg_value(eenter_state, reg_name, reg)
 
     # After tainting all registers, fill registers that are overwritten by EENTER
-    set_reg_value(eenter_state, 'rip', SDKManager().get_oentry_addr())
-    set_reg_value(eenter_state, 'rbx', tcs_addr)
-    set_reg_value(eenter_state, 'rax', tcs_struct.cssa)
-    set_reg_value(eenter_state, 'fs', SDKManager().rebase_addr(tcs_struct.ofs_base, 'fs_base'))
-    set_reg_value(eenter_state, 'gs', SDKManager().rebase_addr(tcs_struct.ogs_base, 'gs_base'))
-
-    # EENTER saves the untrusted RSP and RBP in the SSA frame
-    ssa = SDKManager().rebase_addr(tcs_struct.ossa, 'ossa')
-    ssa_framesize = SDKManager().get_secs().ssa_frame_size * 4096
-    ssa_gpr_pt = ssa + ((tcs_struct.cssa+1) * ssa_framesize) - ctypes.sizeof(SgxSsaGpr)
-    ursp = get_reg_value(eenter_state, 'rsp')
-    urbp = get_reg_value(eenter_state, 'rbp')
-    set_memory_value(eenter_state, ssa_gpr_pt + SgxSsaGpr.ursp.offset, ursp)
-    set_memory_value(eenter_state, ssa_gpr_pt + SgxSsaGpr.urbp.offset, urbp)
-    logger.debug(f'eenter: saved {ursp} and {urbp} in SSA.GPRSGX at {ssa_gpr_pt:#x}')
-
-    # ID flag: software can use this to test for CPUID support (cf Intel
-    # SDM). Attacker control is irrelevant for ID flag, so we always set
-    # this to zero.
-    set_reg_value(eenter_state, 'id', 0)
-
+    SDKManager().init_eenter_state(eenter_state)
+    
     # Set the eexit global to False
     eenter_state.globals['eexit'] = False
-
-    # Init shadow registers that we keep track of in XRSTOR/etc but that are
-    # unknown to angr
-    eenter_state.globals['pandora_mxcsr'] = taint.get_tainted_reg(eenter_state, 'mxcsr', 16)
 
     # At the moment no hooked instruction has been skipped
     eenter_state.globals['prev_skipped_inst'] = None
@@ -96,7 +49,6 @@ def eenter(eenter_state):
         "eenter",
         BP_AFTER
     )
-
 
 def get_enclave_range():
     """

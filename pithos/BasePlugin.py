@@ -60,3 +60,11 @@ class BasePlugin:
         false, then the plugin is still included when the all option is set though.
         """
         return True
+
+    @staticmethod
+    def supports_arch(angr_arch):
+        """
+        By default, plugins are supposed to be architecture-independent, but this can be
+        overriden so they are only activated on selected architectures.
+        """
+        return True

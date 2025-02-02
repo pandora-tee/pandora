@@ -7,13 +7,14 @@ from rich.table import Table
 from rich.theme import Theme
 
 import re
-from angr.errors import SimEngineError
 
 from explorer import taint
 from utilities.angr_helper import get_reg_value
 from explorer.x86 import x86_arch_regs, x86_privileged_regs
 from sdks.SymbolManager import SymbolManager
 
+import logging
+logger = logging.getLogger(__name__)
 
 # workaround to make rich print hex numbers and strings without enclosing
 # quotation marks
@@ -181,7 +182,7 @@ def format_regs(state, only_gen_purpose=False, exit=False):
 
     for reg_name in state.project.arch.register_names.values():
         # skip internal angr pseudo registers
-        if reg_name in state.project.arch.artificial_registers or \
+        if reg_name in (state.project.arch.artificial_registers or []) or \
                 reg_name in x86_arch_regs or \
                 reg_name in x86_privileged_regs:
             continue
@@ -285,10 +286,10 @@ def format_asm(state, formatting=None, angr_project=None, use_ip=None, highlight
             ip = get_reg_value(state, 'ip')
     else:
         ip = use_ip
-
+    
+    current_block = angr_project.factory.block(ip)
     try:
-        current_block = angr_project.factory.block(ip)
-        disasm = angr_project.analyses.Disassembly(ranges=[(current_block.addr, current_block.addr + current_block.size)])
+        disasm = angr_project.analyses.Disassembly(ranges=[(current_block.addr, current_block.addr +current_block.size)])
         pp = disasm.render(formatting=formatting)
         pp = re.sub(r'0x[0-9a-f]+', lambda h: SymbolManager().get_hex_symbol(int(h.group(),base=16)), pp)
         ins_list = [f'\t{line.lstrip()}\n' for line in pp.split('\n')]
@@ -298,12 +299,14 @@ def format_asm(state, formatting=None, angr_project=None, use_ip=None, highlight
                 if usable_ip in ins_str:
                     ins_list[idx] = 'x' + ins_str
                     break
-
         pretty_print_str = "".join(ins_list)
-    except SimEngineError as se:
-        pretty_print_str= f'\tSimEngineError when disassembling: {se}\n'
-
-
+    except Exception as e:
+        # VEX does not support disassembly for MSP430 so we work around that
+        # here by calling objdump externally
+        arch = angr_project.arch.name.lower()
+        logger.debug(f"Exception '{e.__class__.__name__}' when disassembling; falling back to {arch}-objdump..")
+        pretty_print_str = SymbolManager().get_objdump(ip, ip+current_block.size, arch=arch)
+    
     # print('---- BEGIN VEX ----')
     # proj.factory.block(ip).vex.pp()
     # print('---- END VEX ----')

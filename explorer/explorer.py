@@ -23,7 +23,7 @@ from .techniques.TraceLogger import TraceLogger
 logger = logging.getLogger(__name__)
 
 class AbstractExplorer(metaclass=Singleton):
-    def __init__(self, binary_path='', action=UserAction.NONE, base_addr=0, angr_backend='elf'):
+    def __init__(self, binary_path='', action=UserAction.NONE, base_addr=0, angr_backend='elf', angr_arch='x86_64'):
         self.action = action
         self.binary_path = str(binary_path)
         self.base_addr = base_addr
@@ -41,7 +41,7 @@ class AbstractExplorer(metaclass=Singleton):
             PANDORA_INSPECT_ATTRIBUTES)
 
         # Last, create angr project and initial state
-        angr_main_opts = {'backend': angr_backend, 'arch': 'x86_64'}
+        angr_main_opts = {'backend': angr_backend, 'arch': angr_arch}
 
         """
         Some enclaves write to executable pages. Angr by default does not support this and support has to be explicitly

@@ -62,6 +62,10 @@ class AepicPlugin(BasePlugin):
     def get_help_text():
         return 'Validates MMIO buffer leaks when interacting with untrusted memory.'
 
+    @staticmethod
+    def supports_arch(angr_arch):
+        return angr_arch == 'x86_64'
+
     def init_globals(self):
         global taint_action, plugin_shortname
         taint_action = self.action

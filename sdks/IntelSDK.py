@@ -6,7 +6,8 @@ import archinfo
 import elftools.elf.sections
 
 import ui
-from sdks.AbstractSDK import AbstractSDK
+from sdks.AbstractSGXSDK import AbstractSGXSDK
+
 from sdks.common import write_struct_to_memory, load_struct_from_memory, Tcs, create_versioned_struct
 from sdks.intel_linux_sgx_structs import Metadata, PatchEntry, Layout, DataDirectory, ElrangeConfigEntry, \
     LayoutGroup, LayoutId, GlobalData
@@ -24,7 +25,7 @@ UNPADDED_MAGIC = '4c0e5d'
 UNPADDED_MAGIC_LEN = 3
 
 
-class IntelSDK(AbstractSDK):
+class IntelSDK(AbstractSGXSDK):
     def __init__(self, elffile, init_state, version_str, **kwargs):
         super().__init__(elffile, init_state, version_str, **kwargs)
         self.init_state = init_state

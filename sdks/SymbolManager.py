@@ -5,6 +5,7 @@ from elftools.elf.elffile import ELFFile
 from utilities.Singleton import Singleton
 from utilities.helper import file_stream_is_elf_file
 import ui
+import subprocess
 
 from functools import lru_cache
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 # TODO probably should better subclass this w/ and w/o symbol table..
 class SymbolManager(metaclass=Singleton):
 
-    def __init__(self, init_state=None, elf_file=None, base_addr=0, sdk_name=''):
+    def __init__(self, init_state=None, elf_file=None, exec_path=None, base_addr=0, sdk_name=''):
         """
         Expects the symbol table to be in the form of
         [(addr, name)]
@@ -22,11 +23,21 @@ class SymbolManager(metaclass=Singleton):
             logger.error(f'SymbolManager called without init state. Failed setup.')
             exit(1)
         self.init_state = init_state
+        self.exec_path = exec_path
 
         if sdk_name == 'Enclave memory dump' and elf_file is None:
             logger.critical(f'Running a dump file without giving the --sdk-elf-file option means that we will not have access to symbols! We suggest to use the --sdk-elf-file option and give an elf file.')
 
         self._create_symbol_table(elf_file, base_addr)
+
+    def get_objdump(self, start, end, arch='x86_64'):
+        objdump = 'objdump'
+        if 'x86' not in arch:
+            objdump = f'{arch.lower()}-objdump'
+        d = subprocess.run([objdump, '-D', self.exec_path], capture_output=True)
+        g = subprocess.run(['sed', '-n', f'/^[ 0]*{start:x}/,/^.*{end:x}/p'], input=d.stdout,capture_output=True)
+        h = subprocess.run(['head', '-n', '-1'], input=g.stdout, capture_output=True)
+        return h.stdout.decode('utf8')
 
     def _create_symbol_table(self, elf_file, base_addr):
         """
