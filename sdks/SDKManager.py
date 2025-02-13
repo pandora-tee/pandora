@@ -5,7 +5,7 @@ from elftools.elf.elffile import ELFFile
 
 import ui.log_format
 import ui.log_format as fmt
-from sdks import IntelSDK, LinuxSelftestEnclave, OpenEnclaveSDK, Scone, EnclaveDump, IPE
+from sdks import IntelSDK, LinuxSelftestEnclave, OpenEnclaveSDK, Scone, EnclaveDump, IPE, Sancus
 from sdks.AbstractSDK import HasJSONLayout
 from sdks.AbstractSGXSDK import AbstractSGXSDK
 from sdks.SymbolManager import SymbolManager
@@ -24,6 +24,7 @@ SDKS = {
     },
     'msp430' : {
         'ipe' : IPE.openIPESDK,
+        'sancus' : Sancus.SancusSDK,
     }
 }
 ADDITIONAL_LOADING_OPTIONS = {

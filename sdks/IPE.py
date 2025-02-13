@@ -7,11 +7,7 @@ logger = logging.getLogger(__name__)
 EXPECTED_SECTION = '.ipe_seg'
 
 class openIPESDK(AbstractSDK):
-    #Static variable that contains all parsed sections
-    sections = {}
     project = None
-    ipe_start = 0
-    ipe_end = 0
 
     def __init__(self, elffile, init_state, version_str, **kwargs):
         super().__init__(elffile, init_state, version_str, **kwargs)
