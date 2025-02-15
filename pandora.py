@@ -111,7 +111,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         SDK Setup
         """
         # Init binary manager to detect sdk
-        sdk_mgr = SDKManager(binary_path, pandora_ctx.sdk_detection_type, elf_file=pandora_ctx.sdk_elf_file, json_file=pandora_ctx.sdk_json_file)
+        sdk_mgr = SDKManager(binary_path, pandora_ctx.sdk_detection_type, elf_file=pandora_ctx.sdk_elf_file, json_file=pandora_ctx.sdk_json_file, angr_log_level=pandora_ctx.angr_log_level)
 
         # Load binary in angr and initialize the state. Load binary with offset defined by detected SDK
         my_explorer = BasicBlockExplorer(binary_path, action_mgr.actions['explorer'],

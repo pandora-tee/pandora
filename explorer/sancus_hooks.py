@@ -4,6 +4,11 @@ from utilities.angr_helper import set_reg_value, get_reg_value, get_sym_memory_v
 import logging
 logger = logging.getLogger(__name__)
 
+# clear ZF to indicate Sancus instruction succeeded
+def clear_zf(s):
+    (sr_offset, sr_size) = s.project.arch.registers['r2']
+    s.registers.store(sr_offset, s.registers.load(sr_offset,sr_size) & ~(0x1<<1))
+
 """
 if (opcode==16'h1380)
     inst_full = "SM_DISABLE";
@@ -13,6 +18,7 @@ class SimUnprotect(SimProcedure):
         #TODO: this only makes sure the explorer filters these states from the active stash
         # Would be a good idea to throw a BP here for ABISan
         self.state.globals['protections_disabled'] = True
+        clear_zf(self.state)
 
         logger.warning('hooking sancus_disable, 0x1380 ---> NOT IMPLEMENTED')
         self.jump(self.state.addr + bytes_to_skip)
@@ -24,6 +30,7 @@ if (opcode==16'h1381)
 class SimProtect(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
         logger.warning('hooking sancus_enable, 0x1381 ---> NOT IMPLEMENTED')
+        clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
 """
@@ -33,6 +40,7 @@ if (opcode==16'h1382)
 class SimAttest(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
         logger.warning('hooking verify_address, 0x1382 ---> NOT IMPLEMENTED')
+        clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
 """
@@ -52,6 +60,7 @@ Used for wrapping but also for calculating MAC
 class SimEncrypt(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
         logger.warning(f'hooking sancus_encrypt at {hex(self.state.addr)}, 0x1384 ---> NOT IMPLEMENTED')
+        clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
 """
@@ -77,6 +86,7 @@ class SimDecrypt(SimProcedure):
         set_memory_value(self.state, body, to_decrypt_data, True)
 
         #set_memory_value()
+        clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
 """
@@ -89,6 +99,7 @@ class SimGetID(SimProcedure):
         logger.debug('hooking sancus_get_id, 0x1386 ---> NOT IMPLEMENTED')
         
         set_reg_value(self.state, 'r15', 0)
+        clear_zf(self.state)
 
         #NOTE
         #SEE sm_entry.s
@@ -105,7 +116,7 @@ class SimGetID(SimProcedure):
         #just hardcoded to the address of the main function
 
         #inspecting object dumps pointed out that our main function always starts at 0x5c3e, for our tests at least
-        set_reg_value(self.state, 'r7', 0x5c3e)
+        #set_reg_value(self.state, 'r7', 0x5c3e)
 
         self.jump(self.state.addr + bytes_to_skip)
 

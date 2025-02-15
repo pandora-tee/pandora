@@ -37,6 +37,10 @@ def eenter(eenter_state):
     # Set the eexit global to False
     eenter_state.globals['eexit'] = False
 
+    # This will be set when the state encounters an event that would cause a hardware exception/fault,
+    # so as to abort the symbolic execution path
+    eenter_state.globals['enclave_fault'] = False
+
     # At the moment no hooked instruction has been skipped
     eenter_state.globals['prev_skipped_inst'] = None
 

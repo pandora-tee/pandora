@@ -64,6 +64,9 @@ class SDKManager(metaclass=Singleton):
                 except ModuleNotFoundError:
                     logger.error(ui.log_format.format_error('Failed to dynamically import MSP430 angr platform support: did you install <https://github.com/angr/angr-platforms>?'))
                     exit(1)
+
+                if self.additional_args['angr_log_level']:
+                    logging.getLogger('angr_platforms.msp430.instrs_msp430').setLevel(self.additional_args['angr_log_level'].upper())
         else:
             # This cannot be an ELF file: magic is missing.
             if requested_sdk in SDKManager.get_sdk_arch_names():

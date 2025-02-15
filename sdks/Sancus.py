@@ -1,5 +1,7 @@
+import explorer
 from sdks.AbstractSDK import AbstractSDK
-from utilities.angr_helper import set_reg_value
+from angr import BP_AFTER
+from utilities.angr_helper import set_reg_value, get_reg_value
 import re
 import logging
 
@@ -71,3 +73,23 @@ class SancusSDK(AbstractSDK):
 
     def init_eenter_state(self, eenter_state):
         set_reg_value(eenter_state, 'ip', self.textStart)
+
+        #Indicate the protections as enabled (should only be disabled by 0x1380)
+        eenter_state.globals['protections_disabled'] = False
+
+        #Indicate states where the code writes to its own text section (such that these can be removed to errored stash)
+        eenter_state.globals['sancus_text_range'] = (self.textStart, self.textEnd-1)
+        eenter_state.inspect.b('trusted_mem_write', when=BP_AFTER, action=check_write_to_text_section)
+    
+"""
+Function that changes the 'written_to_text_section' variable if there will be written to the 
+text section of the enclave
+"""
+def check_write_to_text_section(state):
+    addr = state.inspect.mem_write_address
+    length = state.inspect.mem_write_length
+    encl_range = state.globals['sancus_text_range']
+    write_addr_inside_encl = explorer.enclave.buffer_touches_enclave(state, addr, length, use_enclave_range=[encl_range])
+    if write_addr_inside_encl:
+        logger.warning(f"Aborting due to write in Sancus text section @{get_reg_value(state, 'ip'):#x} -> {addr}")
+        state.globals['enclave_fault'] = True

@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 class ControlFlowTracker(ExplorationTechnique):
     """
     Tracks all active states before stepping them and makes sure we properly emulate SGX hardware behavior:
-        1. terminate execution when jumping to non-exectable enclave pages; and
+        1. terminate execution when jumping to non-exectable enclave regions; and
         2. terminate execution when jumping to memory outside the enclave (without EEXIT).
 
     NOTE: we can decide condition (2) here without an explicit call to the
-        constraint solver, as pages outside the enclave are not supposed to be
-        in the allowlist of executable pages for (1), so the check for (1) here
+        constraint solver, as regions outside the enclave are not supposed to be
+        in the allowlist of executable regions for (1), so the check for (1) here
         implies the check for (2).
     """
     def __init__(self, init_state: SimState):
@@ -45,7 +45,7 @@ class ControlFlowTracker(ExplorationTechnique):
 
             if not executable or unmeasured_tainted:
                 wrong_jumps.append(s)
-                logger.error(f'State {s.history.parent} incorrectly jumped to {ip:#x} which is not an allowed code page. Exiting this state.')
+                logger.error(f'State {s.history.parent} incorrectly jumped to {ip:#x} which is not an allowed code region. Exiting this state.')
                 bbl_addrs = list(s.history.bbl_addrs)
                 if len(bbl_addrs) > 0:
                     ui.log_format.dump_asm(s.history.parent, logger, logging.ERROR,
@@ -63,7 +63,7 @@ class ControlFlowTracker(ExplorationTechnique):
                                  'verbatim'
                     )]}
                 ty =  'unmeasured and uninitialized' if unmeasured_tainted else 'non-executable'
-                Reporter().report(f'Aborted branch due to illegal jump to {ty} page',
+                Reporter().report(f'Aborted branch due to illegal jump to {ty} region',
                                   s, logger,
                                   SYSTEM_EVENTS_REPORT_NAME,
                                   severity= logging.ERROR,
