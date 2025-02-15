@@ -86,7 +86,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
     with Live(console_progress, console=console):
         task_pandora = console_progress.add_task(description=f'Setting up Pandora engine', total=None)
         task_sdks = console_progress.add_task(description=f'Parsing SDK from binary', total=None)
-        task_hooker = console_progress.add_task(description=f'Hooking SGX-specific instructions', total=None)
+        task_hooker = console_progress.add_task(description=f'Hooking enclave-specific instructions', total=None)
         task_plugins = console_progress.add_task(description=f'Preparing symbolic execution and plugins', total=None)
 
         if pandora_state['ctx'].with_cfg:
@@ -127,7 +127,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         Angr setup
         """
         # Run the hooker for SGX specific instructions and settings
-        hooker.HookerManager(init_state, sdk_mgr.get_code_page_information(), live_console=console_progress, task=task_hooker, angr_arch=sdk_mgr.get_angr_arch())
+        hooker.HookerManager(init_state, sdk_mgr.get_exec_ranges(), live_console=console_progress, task=task_hooker, angr_arch=sdk_mgr.get_angr_arch())
 
         # Simulate eenter on the init_state
         eenter(init_state)
@@ -136,8 +136,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         reporter = ui.report.Reporter(binary_path, sdk_mgr.get_sdk_name(), pandora_ctx.report_level)
 
         # Init requested plugins
-        plugin_mgr = PluginManager(init_state, pandora_ctx.plugins, action_mgr.actions, reporter,
-                                   sdk_mgr.get_encl_size())
+        plugin_mgr = PluginManager(init_state, pandora_ctx.plugins, action_mgr.actions, reporter)
 
         # Give SDKs one last chance to modify the init state
         sdk_mgr.prepare_init_state(init_state)

@@ -245,6 +245,12 @@ class SDKManager(metaclass=Singleton):
 
         raise RuntimeError('SDK not initialized yet.')
 
+    def get_enclave_range(self):
+        if self.sdk is not None:
+            return self.sdk.get_enclave_range()
+        else:
+            raise RuntimeError('SDK not initialized yet.')
+
     def get_load_addr(self):
         # MSP430 enclaves span a subpart of a larger static binary of the whole program memory
         # that does _not_ need to be relocated
@@ -286,14 +292,8 @@ class SDKManager(metaclass=Singleton):
         """
         return SDKManager.get_sdk_arch_names() + list(ADDITIONAL_LOADING_OPTIONS.keys())
 
-    def get_code_page_information(self):
-        """
-        If the SDK supports additional code page layout information via a JSON file, return that. Otherwise, return None.
-        """
-        if isinstance(self.sdk, HasJSONLayout):
-            return self.sdk.get_code_pages()
-        else:
-            return None
+    def get_exec_ranges(self):
+        return self.sdk.get_exec_ranges()
 
     def get_measured_page_information(self):
         return self.sdk.get_unmeasured_pages()
@@ -340,20 +340,15 @@ class SDKManager(metaclass=Singleton):
 
         return False
 
-    def addr_in_executable_pages(self, addr):
+    def addr_in_executable_range(self, addr):
         """
         Returns a bool whether the given concrete IP is within an allowed executable section.
-        If code_pages is set, relies on that information. Otherwise asks the angr project to resolve this.
+        If exec_ranges is set, relies on that information. Otherwise asks the angr project to resolve this.
         """
-        code_pages = self.get_code_page_information()
+        exec_ranges = self.get_exec_ranges()
 
-        if code_pages is not None:
-            exists = False
-            for (page_addr, size) in code_pages:
-                if page_addr <= addr < page_addr + size:
-                    exists = True
-                    break
-            return exists
+        if exec_ranges is not None:
+            return any(exec_addr <= addr < exec_addr + exec_size for (exec_addr, exec_size) in exec_ranges)
 
         else:
             section = self.init_state.project.loader.main_object.sections.find_region_containing(addr)

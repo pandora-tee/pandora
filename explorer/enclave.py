@@ -54,11 +54,7 @@ def get_enclave_range():
     """
     Enclave range [min_addr,max_addr], i.e., both are *inclusive*.
     """
-    min_addr = SDKManager().get_base_addr()
-    # we do minus 1 here because min_addr+size is the first address _outside_
-    # the enclave, and we want to have the range _inclusive_.
-    max_addr = min_addr + SDKManager().get_encl_size() - 1
-    return min_addr, max_addr
+    return SDKManager().get_enclave_range()
 
 """
 To speed things up, wrap the rest of the function in an inner function that utilizes lru_caching
@@ -122,7 +118,7 @@ def _check_touches(addr, length, enclave_min_addr, enclave_max_addr, solver):
 
     return solver.satisfiable(extra_constraints=[e])
 
-def buffer_touches_enclave(state, addr, length, use_enclave_range : None | tuple = None):
+def buffer_touches_enclave(state, addr, length, use_enclave_range : None | [tuple] = None):
     """
     Function to determine whether the buffer [addr, addr+length[ *touches* the enclave range.
     --> Checks whether: enclave_min-len < addr && addr <= enclave_max
@@ -130,14 +126,14 @@ def buffer_touches_enclave(state, addr, length, use_enclave_range : None | tuple
     :param state: Any state to run this on. Only used to access the solver.
     :param addr: The start address of the buffer (inclusive)
     :param length: The length of the buffer so that addr + length is the first address AFTER the buffer.
-    :param use_enclave_range: An OPTIONAL tuple to overwrite the enclave range or None to use the default enclave range. Use for testing only.
+    :param use_enclave_range: An OPTIONAL list of tuples to overwrite the enclave range or None to use the default enclave range. Use for testing only.
     """
     if not use_enclave_range:
         use_enclave_range = get_enclave_range()
-    (enclave_min, enclave_max) = use_enclave_range
 
+    # return true iff the buffer does not touch ANY of the contiguous enclave ranges
     # Call this inner function (depending on cache, this call will be fast)
-    return _check_touches(addr, length, enclave_min, enclave_max, state.solver)
+    return any(_check_touches(addr, length, enclave_min, enclave_max, state.solver) for (enclave_min, enclave_max) in use_enclave_range)
 
 """
 To speed things up, wrap the rest of the function in an inner function that utilizes lru_caching
@@ -186,7 +182,7 @@ def _check_entirely_inside(addr, length, enclave_min_addr, enclave_max_addr, sol
     return not solver.satisfiable(extra_constraints=[e])
 
 
-def buffer_entirely_inside_enclave(state, address, buffer_length, use_enclave_range : None | tuple = None):
+def buffer_entirely_inside_enclave(state, address, buffer_length, use_enclave_range : None | [tuple] = None):
     """
     Function to determine whether the buffer [addr, addr+length[ always lies *entirely* inside the enclave.
     --> Checks whether: enclave_min <= addr && addr+len-1 <= enclave_max
@@ -194,10 +190,10 @@ def buffer_entirely_inside_enclave(state, address, buffer_length, use_enclave_ra
     :param state: Any state to run this on. Only used to access the solver.
     :param address: The start address of the buffer (inclusive)
     :param buffer_length: The length of the buffer so that addr + length is the first address AFTER the buffer.
-    :param use_enclave_range: An OPTIONAL tuple to overwrite the enclave range or None to use the default enclave range. Use for testing only.
+    :param use_enclave_range: An OPTIONAL list of tuples to overwrite the enclave range or None to use the default enclave range. Use for testing only.
     """
     if not use_enclave_range:
         use_enclave_range = get_enclave_range()
-    (enclave_min, enclave_max) = use_enclave_range
 
-    return _check_entirely_inside(address, buffer_length, enclave_min, enclave_max, state.solver)
+    # return true iff the buffer falls entirely in ANY of the contiguous enclave ranges
+    return any(_check_entirely_inside(address, buffer_length, enclave_min, enclave_max, state.solver) for (enclave_min, enclave_max) in use_enclave_range)

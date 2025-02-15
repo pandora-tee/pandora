@@ -102,8 +102,7 @@ class Reporter(metaclass=Singleton):
         # Keep a set of unique issues that we do not want to duplicate. Dict keeps one set per plugin
         self.unique_issues = {}
 
-        # Get enclave addresses to print as metadata
-        enclave_min, enclave_max = get_enclave_range()
+        enclave_ranges = [f'({min:#x}, {max:#x})' for (min, max) in get_enclave_range()]
 
         # The first object in each json contains metadata
         metadata = {
@@ -112,7 +111,7 @@ class Reporter(metaclass=Singleton):
             "time": datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
             "start_timestamp": datetime.datetime.now().timestamp(),
             "sdk": sdk_name,
-            "enclave_range" : f'[{enclave_min:#x}, {enclave_max:#x}]'
+            "enclave_range" : f'[{", ".join(enclave_ranges)}]'
         }
 
         self.file.write('[\n')

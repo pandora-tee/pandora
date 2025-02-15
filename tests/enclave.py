@@ -20,7 +20,7 @@ def _check_one(state, func, case_str, expect, test_addr, test_length, test_encla
     Performs the check on the given function
     """
     global num_issues
-    result = func(state, test_addr, test_length, test_enclave_range)
+    result = func(state, test_addr, test_length, [test_enclave_range])
 
     if type(test_addr) is int:
         str_addr = hex(test_addr)

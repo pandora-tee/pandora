@@ -166,7 +166,7 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
     def get_angr_backend():
         return 'blob'
 
-    def get_code_pages(self):
+    def get_exec_ranges(self):
         return self.code_pages
 
     @staticmethod

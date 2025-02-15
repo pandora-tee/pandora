@@ -38,17 +38,20 @@ class SancusHooker(AbstractHooker):
     def hook_mem_region(self, addr, size):
         SANCUS_INSTR_SIZE=2
         entry_sym = SymbolManager().get_symbol_exact(addr)
-        if entry_sym and re.search(r'__sm_(\w+)_entry', entry_sym):
-            logger.debug(f'Hooking enclave section {addr:#x}:{size} ({entry_sym})')
+        if entry_sym and re.search(r'__sm_(\w+)_entry|__sm_(\w+)_public_start', entry_sym):
+            logger.debug(f'Hooking enclave section [{addr:#x},{addr+size:#x}] ({entry_sym})')
             disasm = SymbolManager().get_objdump(addr, addr+size, arch='msp430')
             
             for (addr, opcode) in self.get_sancus_instr_addresses(disasm.splitlines()):
-                sim_proc = self.instruction_hooks[opcode](opstr="", bytes_to_skip=2, mnemonic=opcode)
-                tab_str = f'{addr}:\t{opcode:<10}\t{sim_proc.__class__.__name__:<20}\t{str(SANCUS_INSTR_SIZE):<3}'
-                logger.debug(tab_str)
-                self.project.hook(int(addr, 16), hook=sim_proc, length=SANCUS_INSTR_SIZE)
+                if opcode in self.instruction_hooks.keys():
+                    sim_proc = self.instruction_hooks[opcode](opstr="", bytes_to_skip=2, mnemonic=opcode)
+                    tab_str = f'{addr}:\t{opcode:<10}\t{sim_proc.__class__.__name__:<20}\t{str(SANCUS_INSTR_SIZE):<3}'
+                    logger.debug(tab_str)
+                    self.project.hook(int(addr, 16), hook=sim_proc, length=SANCUS_INSTR_SIZE)
+                else:
+                    logger.warning(f'Not hooking unrecognized instruction ".word {opcode}" @{addr}')
         else:
-            logger.debug(f"Skipping non-enclave section {addr:#x}:{size} ({entry_sym})")
+            logger.debug(f'Skipping non-enclave section [{addr:#x},{addr+size:#x}] ({entry_sym})')
 
     """
     Return a list with (address-opcode) pairs of all Sancus related instructions
@@ -179,10 +182,10 @@ HOOKERS = {
 }
 
 class HookerManager:
-    def __init__(self, init_state, code_pages = None, live_console=None, task=None, angr_arch='x86_64'):
+    def __init__(self, init_state, exec_ranges = None, live_console=None, task=None, angr_arch='x86_64'):
         self.init_state = init_state
         self.project = init_state.project
-        self.code_pages = code_pages
+        self.exec_ranges = exec_ranges
         self.hooker = HOOKERS[angr_arch](init_state)
 
         logger.info("Hooking instructions.")
@@ -202,14 +205,14 @@ class HookerManager:
                 live_console.update(task, completed=loop_count)
         else:
             # Not a normal elf file. In this case, utilize the code pages we got
-            if not code_pages:
+            if not exec_ranges:
                 logger.error(ui.log_format.format_error(f"Can't hook without a memory layout yet!"))
                 exit(1)
 
-            total_count = len(self.code_pages)
+            total_count = len(self.exec_ranges)
             if live_console:
                 live_console.update(task, total=total_count, completed=0)
-            for (offset, count) in self.code_pages:
+            for (offset, count) in self.exec_ranges:
                 self.hooker.hook_mem_region(offset, count)
                 loop_count += 1
                 live_console.update(task, completed=loop_count)

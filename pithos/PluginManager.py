@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class PluginManager:
 
-    def __init__(self, init_state, requested_plugins : list, plugin_actions, reporter, encl_size):
+    def __init__(self, init_state, requested_plugins : list, plugin_actions, reporter):
 
         if 'all' in requested_plugins:
             logger.info(f'Activating {log_fmt.format_warning("all")} plugins...')
@@ -40,7 +40,7 @@ class PluginManager:
                 continue
             
             action = plugin_actions[p]
-            self.active_plugins[p] = plugins[p](init_state, encl_size, reporter, action, shortname=p)
+            self.active_plugins[p] = plugins[p](init_state, reporter, action, shortname=p)
             logger.info(f"\tActivated plugin {log_fmt.format_inline_header(p)} "
                          f"with user action {log_fmt.format_inline_header(action.name)}")
 

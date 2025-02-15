@@ -11,7 +11,6 @@ from ui.log_format import get_state_backtrace_formatted, get_state_backtrace_com
 from utilities.Singleton import Singleton
 from explorer.engine.PandoraEngine import PandoraEngine
 from .breakpoints import PANDORA_EVENT_TYPES, PANDORA_INSPECT_ATTRIBUTES
-from .enclave import get_enclave_range
 from .memory.EnclaveAwareMemory import EnclaveAwareMemory
 from .techniques.EnclaveReentry import EnclaveReentry
 from .techniques.ControlFlow import ControlFlowTracker
@@ -149,7 +148,6 @@ class BasicBlockExplorer(AbstractExplorer):
     def _init_simgr(self):
         if not self.simgr:
             ui.log_format.dump_regs(self.initial_state, logger, logging.INFO, header_msg='Initial register state')
-            logger.debug(f'Enclave range is {str(get_enclave_range())}')
 
             # Create the simulation manager on first step
             logger.info('Starting stepping. Creating simulation manager.')

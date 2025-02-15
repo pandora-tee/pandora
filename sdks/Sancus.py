@@ -20,8 +20,8 @@ class SancusSDK(AbstractSDK):
         self.dataStart = self.get_symbol_addr(f'__sm_{self.enclave}_secret_start')
         self.dataEnd = self.get_symbol_addr(f'__sm_{self.enclave}_secret_end')
         logger.info(f'Found Sancus enclave "{self.enclave}":')
-        logger.info(f'\ttext range: [{self.textStart:#x},{self.textEnd:#x}]')
-        logger.info(f'\tdata range: [{self.dataStart:#x},{self.dataEnd:#x}]')
+        logger.info(f'\ttext range: [{self.textStart:#x},{self.textEnd:#x}[')
+        logger.info(f'\tdata range: [{self.dataStart:#x},{self.dataEnd:#x}[')
     
     def get_symbol_addr(self, name):
         s = self.project.loader.find_symbol(name)
@@ -63,5 +63,11 @@ class SancusSDK(AbstractSDK):
         #return {'text': self.textSize, 'data': self.dataSize}
         return self.textEnd - self.textStart
     
+    def get_enclave_range(self):
+        return [(self.textStart, self.textEnd - 1), (self.dataStart, self.dataEnd - 1)]
+
+    def get_exec_ranges(self):
+        return [(self.textStart, self.textEnd - self.textStart)]
+
     def init_eenter_state(self, eenter_state):
         set_reg_value(eenter_state, 'ip', self.textStart)

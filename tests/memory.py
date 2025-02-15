@@ -31,7 +31,7 @@ def test_default_memory(state):
    :return: Number of issues during this test.
     """
     global num_issues
-    enclave_min, enclave_max = get_enclave_range()
+    enclave_min, enclave_max = get_enclave_range()[0]
 
     # Test 1
     # TODO: Not sure how to find this...

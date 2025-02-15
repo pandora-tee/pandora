@@ -42,6 +42,13 @@ class AbstractSDK:
         """
         return -1 # Default: Let angr decide (i.e., skip this setting)
 
+    def get_enclave_range(self):
+        min_addr = self.get_base_addr()
+        # we do minus 1 here because min_addr+size is the first address _outside_
+        # the enclave, and we want to have the range _inclusive_.
+        max_addr = min_addr + self.get_encl_size() - 1
+        return [(min_addr, max_addr)]
+
     @staticmethod
     def get_angr_backend():
         """
@@ -62,6 +69,12 @@ class AbstractSDK:
         """
         pass
 
+    def get_exec_ranges(self):
+        """
+        Optionally return a table of [(addr, size)] with all pages that are executable.
+        """
+        return None
+
     def override_executable(self, addr):
         return False
 
@@ -69,11 +82,6 @@ class HasJSONLayout:
     """
     Additional base class that REQUIRES a JSON layout
     """
-    def get_code_pages(self):
-        """
-        Returns a table of [(addr, size)] with all pages that are executable.
-        """
-        pass
 
     @staticmethod
     def prepare_enclave_offset(json_file):

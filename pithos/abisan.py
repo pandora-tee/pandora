@@ -39,8 +39,8 @@ class ABISanitizationPlugin(BasePlugin):
 
     """
 
-    def __init__(self, init_state, encl_size, reporter, usr_act=UserAction.NONE, shortname=abi_shortname):
-        super().__init__(init_state, encl_size, reporter, usr_act, shortname)
+    def __init__(self, init_state, reporter, usr_act=UserAction.NONE, shortname=abi_shortname):
+        super().__init__(init_state, reporter, usr_act, shortname)
 
         # Initialize ignored regs from architectural artificial registers and privileged registers
         global ignored_regs

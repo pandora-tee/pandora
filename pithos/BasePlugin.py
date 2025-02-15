@@ -7,9 +7,8 @@ class BasePlugin:
     An abstract base class specifying the interface for Pandora plugins.
     """
 
-    def __init__(self, init_state, encl_size, reporter, usr_act=UserAction.NONE, shortname=''):
+    def __init__(self, init_state, reporter, usr_act=UserAction.NONE, shortname=''):
         self.action = usr_act
-        self.encl_size = encl_size
         self.reporter = reporter
         self.shortname = shortname
 

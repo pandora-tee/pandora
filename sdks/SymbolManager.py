@@ -1,5 +1,6 @@
 import logging
 import bisect
+import re
 from elftools.elf.elffile import ELFFile
 
 from utilities.Singleton import Singleton
@@ -29,17 +30,29 @@ class SymbolManager(metaclass=Singleton):
             logger.critical(f'Running a dump file without giving the --sdk-elf-file option means that we will not have access to symbols! We suggest to use the --sdk-elf-file option and give an elf file.')
 
         self._create_symbol_table(elf_file, base_addr)
+        self.objdump = None
 
-    def get_objdump(self, start, end, arch='x86_64'):
-        objdump = 'objdump'
+    def _create_objdump(self, arch):
+        bin = 'objdump'
         if 'x86' not in arch:
             # XXX we keep a local copy of MSPGCC msp430-objdump 2.21.1 (mspgcc LTS 20120406 unpatched)
             # as newer objdump seems to forcibly interpret Sancus instructions as 20-bit CALLA instructions..
-            objdump = f'./bin/{arch.lower()}-objdump'
-        d = subprocess.run([objdump, '-D', self.exec_path], capture_output=True)
-        g = subprocess.run(['sed', '-n', f'/^[ 0]*{start:x}/,/^.*{end:x}/p'], input=d.stdout,capture_output=True)
-        h = subprocess.run(['head', '-n', '-1'], input=g.stdout, capture_output=True)
-        return h.stdout.decode('utf8')
+            bin = f'./bin/{arch.lower()}-objdump'
+        d = subprocess.run([bin, '-D', self.exec_path], capture_output=True)
+        self.objdump = d.stdout.decode('utf8')
+
+    def get_objdump(self, start, end, arch='x86_64'):
+        if not self.objdump:
+            self._create_objdump(arch)
+        
+        # Regex to match the address in objdump format
+        address_pattern = re.compile(r'^\s*([0-9a-fA-F]+)(?:\s*<[^>]+>)?:')
+
+        output = "\n".join(
+            line for line in self.objdump.splitlines()
+            if (match := address_pattern.match(line)) and start <= int(match.group(1), 16) <= end
+        ) + "\n"
+        return output
 
     def _create_symbol_table(self, elf_file, base_addr):
         """

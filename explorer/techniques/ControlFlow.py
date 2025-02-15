@@ -40,7 +40,7 @@ class ControlFlowTracker(ExplorationTechnique):
             assert(type(ip) is int)
             #logger.debug(f'jmp to {ip:#x}')
 
-            executable = SDKManager().addr_in_executable_pages(ip)
+            executable = SDKManager().addr_in_executable_range(ip)
             unmeasured_tainted = SDKManager().addr_in_unmeasured_uninitialized_page(ip, 1) and memory_is_tainted(s, ip, 1)
 
             if not executable or unmeasured_tainted:
