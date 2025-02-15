@@ -3,10 +3,12 @@ import ctypes
 import logging
 
 import archinfo
+import claripy
 import elftools.elf.sections
 
 import ui
-from sdks.AbstractSDK import AbstractSDK
+from sdks.AbstractSGXSDK import AbstractSGXSDK
+
 from sdks.common import write_struct_to_memory, load_struct_from_memory, Tcs, create_versioned_struct
 from sdks.intel_linux_sgx_structs import Metadata, PatchEntry, Layout, DataDirectory, ElrangeConfigEntry, \
     LayoutGroup, LayoutId, GlobalData
@@ -24,7 +26,7 @@ UNPADDED_MAGIC = '4c0e5d'
 UNPADDED_MAGIC_LEN = 3
 
 
-class IntelSDK(AbstractSDK):
+class IntelSDK(AbstractSGXSDK):
     def __init__(self, elffile, init_state, version_str, **kwargs):
         super().__init__(elffile, init_state, version_str, **kwargs)
         self.init_state = init_state
@@ -156,13 +158,13 @@ class IntelSDK(AbstractSDK):
                          f'of size {hex(p.size)} '
                          # f'to be {binascii.hexlify(src_slice)}'
                          )
-            init_state.memory.store(mem_dst, init_state.solver.BVV(src_slice), with_enclave_boundaries=False)
+            init_state.memory.store(mem_dst, claripy.BVV(src_slice), with_enclave_boundaries=False)
 
         # Now do the same with all layouts
         PAGE_SIZE = 0x1000
         # Init an empty page and a guard page.
         # For now a guard page is just treated as an empty page but we might want to treat them different later
-        empty_page = init_state.solver.BVV(b'\00' * PAGE_SIZE)
+        empty_page = claripy.BVV(b'\00' * PAGE_SIZE)
         # Loop over layouts and apply those that are relevant
         # NOTE: As asserted above, all layouts are assumed to be entries and no groups are supported.
         for l in self.layouts:
@@ -182,7 +184,7 @@ class IntelSDK(AbstractSDK):
                     # Create a new BVV page for this
                     content_amount = int(PAGE_SIZE / 4)  # content_size is uint32 = 4 byte
                     content_size_bytes = l.entry.content_size.to_bytes(4, "little")
-                    content_page = init_state.solver.BVV(content_size_bytes * content_amount)
+                    content_page = claripy.BVV(content_size_bytes * content_amount)
 
                 # We just want to add the page. Do this as often as page_count demands
                 logger.debug(f'Fixing layout {l.entry.get_name()}: Adding {l.entry.page_count} pages '
@@ -200,7 +202,7 @@ class IntelSDK(AbstractSDK):
                 assert l.entry.page_count == 1, \
                     "Copying memory for layout but more than one page requested? Unknown feature. Aborting."
                 metadata_offset = self.metadata.metadata_offset_to_data_offset(l.entry.content_offset)
-                mem_slice = init_state.solver.BVV(bytes(bytearray(
+                mem_slice = claripy.BVV(bytes(bytearray(
                     self.metadata.data[metadata_offset: metadata_offset + l.entry.content_size]
                 )))
                 init_state.memory.store(enclave_file_base + l.entry.rva, mem_slice, with_enclave_boundaries=False)

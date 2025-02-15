@@ -61,7 +61,7 @@ class PandoraContext:
     sdk_detection_type: str
     actions: List[str]
     report_fmt: str
-    report_max_rips: int
+    report_max_ips: int
     with_cfg: bool
     # Options for enclave memory dumps
     sdk_elf_file: Path
@@ -86,7 +86,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
     with Live(console_progress, console=console):
         task_pandora = console_progress.add_task(description=f'Setting up Pandora engine', total=None)
         task_sdks = console_progress.add_task(description=f'Parsing SDK from binary', total=None)
-        task_hooker = console_progress.add_task(description=f'Hooking SGX-specific instructions', total=None)
+        task_hooker = console_progress.add_task(description=f'Hooking enclave-specific instructions', total=None)
         task_plugins = console_progress.add_task(description=f'Preparing symbolic execution and plugins', total=None)
 
         if pandora_state['ctx'].with_cfg:
@@ -111,11 +111,11 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         SDK Setup
         """
         # Init binary manager to detect sdk
-        sdk_mgr = SDKManager(binary_path, pandora_ctx.sdk_detection_type, elf_file=pandora_ctx.sdk_elf_file, json_file=pandora_ctx.sdk_json_file)
+        sdk_mgr = SDKManager(binary_path, pandora_ctx.sdk_detection_type, elf_file=pandora_ctx.sdk_elf_file, json_file=pandora_ctx.sdk_json_file, angr_log_level=pandora_ctx.angr_log_level)
 
         # Load binary in angr and initialize the state. Load binary with offset defined by detected SDK
         my_explorer = BasicBlockExplorer(binary_path, action_mgr.actions['explorer'],
-                                                  sdk_mgr.get_base_addr(), angr_backend=sdk_mgr.get_angr_backend())
+                                                  sdk_mgr.get_load_addr(), angr_backend=sdk_mgr.get_angr_backend(), angr_arch=sdk_mgr.get_angr_arch())
         init_state = my_explorer.get_init_state()
 
         # Initialize sdk with specific initial state
@@ -127,7 +127,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         Angr setup
         """
         # Run the hooker for SGX specific instructions and settings
-        hooker.HookerManager(init_state, sdk_mgr.get_code_page_information(), live_console=console_progress, task=task_hooker)
+        hooker.HookerManager(init_state, sdk_mgr.get_exec_ranges(), live_console=console_progress, task=task_hooker, angr_arch=sdk_mgr.get_angr_arch())
 
         # Simulate eenter on the init_state
         eenter(init_state)
@@ -136,8 +136,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         reporter = ui.report.Reporter(binary_path, sdk_mgr.get_sdk_name(), pandora_ctx.report_level)
 
         # Init requested plugins
-        plugin_mgr = PluginManager(init_state, pandora_ctx.plugins, action_mgr.actions, reporter,
-                                   sdk_mgr.get_encl_size())
+        plugin_mgr = PluginManager(init_state, pandora_ctx.plugins, action_mgr.actions, reporter)
 
         # Give SDKs one last chance to modify the init state
         sdk_mgr.prepare_init_state(init_state)
@@ -358,7 +357,7 @@ def pandora_report(pandora_ctx: PandoraContext, log_path: Path):
     console.print(f'{log_format.format_header("Pandora")}: Working on log file {log_format.format_warning(log_path)}.')
     with open(log_path, 'r') as f:
         data = json.load(f)
-    report_formatter = ReportFormatter(data, pandora_ctx.report_fmt, pandora_ctx.report_level, pandora_ctx.report_max_rips)
+    report_formatter = ReportFormatter(data, pandora_ctx.report_fmt, pandora_ctx.report_level, pandora_ctx.report_max_ips)
     report_formatter.write_reports()
 
 
@@ -622,9 +621,9 @@ def main_callback(
             help="Define the format for all plugin reports.",
             rich_help_panel="Report generation"
         ),
-        report_max_rips: int = typer.Option(
-            0, "--report-rips",
-            help="Maximum number of duplicate reports per unique RIP for all plugin HTML reports. 0 or negative to report all.",
+        report_max_ips: int = typer.Option(
+            0, "--report-ips",
+            help="Maximum number of duplicate reports per unique IP for all plugin HTML reports. 0 or negative to report all.",
             rich_help_panel="Report generation"
         ),
         with_cfg: bool = typer.Option(

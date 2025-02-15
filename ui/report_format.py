@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 ########################################
 
 class BaseFormatter:
-    def __init__(self, title, path, max_rips=0):
-        self.max_rips = max_rips
+    def __init__(self, title, path, max_ips=0):
+        self.max_ips = max_ips
         pass
 
     def save_report(self):
@@ -36,7 +36,7 @@ class BaseFormatter:
     def alert(self, title, info):
         pass
 
-    def section(self, rip, sym, info, severity):
+    def section(self, ip, sym, info, severity):
         pass
 
     def subsection(self, name):
@@ -95,9 +95,9 @@ class LogFormatter(BaseFormatter):
     def alert(self, title, info):
         self.logger.warning(f'[ALERT] {info}')
 
-    def section(self, rip, sym, info, severity):
+    def section(self, ip, sym, info, severity):
         self.logger.log(severity, '--------------------------------------------------------------------------------')
-        self.logger.log(severity, format_header(f'[{logging.getLevelName(severity)}] [RIP={rip:#x} ({sym})] {info}'))
+        self.logger.log(severity, format_header(f'[{logging.getLevelName(severity)}] [IP={ip:#x} ({sym})] {info}'))
         self.logger.log(severity, '--------------------------------------------------------------------------------')
         self.sect_sev = severity
 
@@ -141,12 +141,12 @@ class HTMLFormatter(BaseFormatter):
         'CRITICAL': 'bg-danger'
     }
 
-    def __init__(self, title, path, max_rips=0):
+    def __init__(self, title, path, max_ips=0):
         self.path = path
         self.conv = Ansi2HTMLConverter()
         self.label_count = 0
         self.sec_map = defaultdict(lambda: [])
-        self.max_rips = max_rips
+        self.max_ips = max_ips
 
         self.html = dominate.document(title='Report: ' + title)
         with self.html.head:
@@ -172,7 +172,7 @@ class HTMLFormatter(BaseFormatter):
             hr()
 
     def save_report(self):
-        self.create_rip_sections()
+        self.create_ip_sections()
 
         with open(self.path, 'w') as f:
             print(self.html, file=f)
@@ -186,10 +186,10 @@ class HTMLFormatter(BaseFormatter):
 
     def summary(self, severity_dict):
         table_dict = {}
-        for sev, rips in severity_dict.items():
+        for sev, ips in severity_dict.items():
             table_dict[sev] = ul()
-            for (rip, info) in rips:
-                table_dict[sev] += li(em(info), f' at {rip:#x}')
+            for (ip, info) in ips:
+                table_dict[sev] += li(em(info), f' at {ip:#x}')
 
         with self.content:
             h2('Report summary')
@@ -228,31 +228,31 @@ class HTMLFormatter(BaseFormatter):
             badges += self.create_badge(lbl, style)
         return badges
 
-    def create_rip_sections(self):
+    def create_ip_sections(self):
         if not self.sec_map:
             return
-        rip_secs = ul(cls='list-group', id='rip_sections')
+        ip_secs = ul(cls='list-group', id='ip_sections')
 
-        # create a collapsible list of issue sections per instruction (RIP)
-        for rip, sec_lst in self.sec_map.items():
-            if self.max_rips > 0 and len(sec_lst) > self.max_rips:
-                badges = {f'{len(sec_lst)} truncated to {self.max_rips}': 'bg-primary'}
-                sec_lst = sec_lst[:self.max_rips]
+        # create a collapsible list of issue sections per instruction (IP)
+        for ip, sec_lst in self.sec_map.items():
+            if self.max_ips > 0 and len(sec_lst) > self.max_ips:
+                badges = {f'{len(sec_lst)} truncated to {self.max_ips}': 'bg-primary'}
+                sec_lst = sec_lst[:self.max_ips]
             else:
                 badges = {f'{len(sec_lst)}': 'bg-primary'}
-            rip_sec = ul(cls='list-group list-group-flush collapse', id=self.make_unique_label('rip_section'))
+            ip_sec = ul(cls='list-group list-group-flush collapse', id=self.make_unique_label('ip_section'))
             for (card, desc, severity, sym) in sec_lst:
                 sev_collapse = f' collapse show {severity.lower()}'
-                rip_sec += li(card, cls='list-group-item' + sev_collapse)
+                ip_sec += li(card, cls='list-group-item' + sev_collapse)
                 badges[sym] = 'bg-light text-dark'
                 badges[severity] = self.badge_styles[severity] + sev_collapse
                 badges[desc] = self.badge_styles[severity] + sev_collapse
 
             badges = self.create_badges(badges)
-            header = div(h3(a(i(cls='bi bi-chevron-down'), f' Issues reported at {rip:#x}',
+            header = div(h3(a(i(cls='bi bi-chevron-down'), f' Issues reported at {ip:#x}',
                               badges, cls='text-muted text-decoration-none')), cls='w-100',
-                         data_bs_toggle='collapse', data_bs_target=f'#{rip_sec["id"]}')
-            rip_secs += li(header, rip_sec, cls='list-group-item')
+                         data_bs_toggle='collapse', data_bs_target=f'#{ip_sec["id"]}')
+            ip_secs += li(header, ip_sec, cls='list-group-item')
 
         # create checkboxes to filter based on severity
         checks = div(cls=f'row p-1 lead')
@@ -265,24 +265,24 @@ class HTMLFormatter(BaseFormatter):
 
         self.content += h2('Report details ', small('(click to uncollapse)', cls='text-muted'))
         self.content += checks
-        self.content += rip_secs
+        self.content += ip_secs
 
-    def section(self, rip, sym, desc, severity):
+    def section(self, ip, sym, desc, severity):
         # create a "section" card to be filled with "subsection" information
         # about this vulnerability
         self.sec = div(cls='card-text collapse', id=self.make_unique_label('section'))
 
         # title the card with vulnerability description and badges
         sev = logging.getLevelName(severity)
-        badges = self.create_badges({sev: self.badge_styles[sev], f'RIP={rip:#x}': 'bg-light text-dark'})
+        badges = self.create_badges({sev: self.badge_styles[sev], f'IP={ip:#x}': 'bg-light text-dark'})
         title = div(h4(a(i(cls='bi bi-chevron-compact-down'), f' {desc}', badges,
                          cls='card-title p-2 text-muted text-decoration-none')), cls='w-100',
                     data_bs_toggle='collapse', data_bs_target=f'#{self.sec["id"]}')
         card = div(title, cls='card')
         card += self.sec
 
-        # collect cards per RIP, to be aggregated upon writing out the report
-        self.sec_map[rip].append((card, desc, sev, sym))
+        # collect cards per IP, to be aggregated upon writing out the report
+        self.sec_map[ip].append((card, desc, sev, sym))
 
     def subsection(self, name):
         self.sec += h5(name, cls='p-2')
@@ -337,7 +337,7 @@ report_formats = {
 }
 
 class ReportFormatter:
-    def __init__(self, report_data, report_fmt, reporter_level = LogLevel.INFO, max_rips=0):
+    def __init__(self, report_data, report_fmt, reporter_level = LogLevel.INFO, max_ips=0):
         if len(report_data) < 3:
             raise Exception('Report data is missing the metadata fields')
 
@@ -373,13 +373,13 @@ class ReportFormatter:
             path = basedir / filename
 
             # Set formatter
-            fmt = report_formats[report_fmt](plug['name'], path.as_posix(), max_rips)
+            fmt = report_formats[report_fmt](plug['name'], path.as_posix(), max_ips)
 
             self.plugins[plug['shortname']] = {
-                'fmt' : fmt,
+                'fmt'  : fmt,
                 'name' : plug['name'],
                 'desc' : plug['desc'],
-                'rips' : defaultdict(set),
+                'ips'  : defaultdict(set),
                 'path' : path
             }
 
@@ -404,8 +404,8 @@ class ReportFormatter:
 
             # TODO: Slight code duplication to Reporter below
             lvl_summaries = []
-            for sev, rips in plug['rips'].items():
-                num = len(rips)
+            for sev, ips in plug['ips'].items():
+                num = len(ips)
                 lvl = f'{format_log_level(num, sev)} unique {format_log_level(sev, sev)} issue{"s" if num > 1 else ""}'
                 lvl_summaries.append(lvl)
 
@@ -413,7 +413,7 @@ class ReportFormatter:
                 # Only if we have issues, print a summary and write to the file
                 issues = f'{"; ".join(lvl_summaries)}.'
                 fmt.alert('Summary', 'Found ' + issues)
-                fmt.summary(plug['rips'])
+                fmt.summary(plug['ips'])
 
                 # Then write the rest of the report
                 log_always(logger, f"Saving report of {plug['name']} to {format_path(plug['path'])}")
@@ -430,14 +430,14 @@ class ReportFormatter:
             item['extra-sections'] = {}
 
         fmt = self.plugins[item['plugin']]['fmt']
-        rips = self.plugins[item['plugin']]['rips']
+        ips = self.plugins[item['plugin']]['ips']
 
-        rip = item['rip']
+        ip = item['ip']
         sym = item['symbol']
-        rips[logging.getLevelName(item['severity'])].add((rip, item['info']))
+        ips[logging.getLevelName(item['severity'])].add((ip, item['info']))
 
         # Store extended info in formatted report
-        fmt.section(rip, sym, item['info'], item['severity'])
+        fmt.section(ip, sym, item['info'], item['severity'])
 
         if len(item['extra']) > 0:
             fmt.subsection('Plugin extra info')

@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 class ControlFlowTracker(ExplorationTechnique):
     """
     Tracks all active states before stepping them and makes sure we properly emulate SGX hardware behavior:
-        1. terminate execution when jumping to non-exectable enclave pages; and
+        1. terminate execution when jumping to non-exectable enclave regions; and
         2. terminate execution when jumping to memory outside the enclave (without EEXIT).
 
     NOTE: we can decide condition (2) here without an explicit call to the
-        constraint solver, as pages outside the enclave are not supposed to be
-        in the allowlist of executable pages for (1), so the check for (1) here
+        constraint solver, as regions outside the enclave are not supposed to be
+        in the allowlist of executable regions for (1), so the check for (1) here
         implies the check for (2).
     """
     def __init__(self, init_state: SimState):
@@ -40,17 +40,17 @@ class ControlFlowTracker(ExplorationTechnique):
             assert(type(ip) is int)
             #logger.debug(f'jmp to {ip:#x}')
 
-            executable = SDKManager().addr_in_executable_pages(ip)
+            executable = SDKManager().addr_in_executable_range(ip)
             unmeasured_tainted = SDKManager().addr_in_unmeasured_uninitialized_page(ip, 1) and memory_is_tainted(s, ip, 1)
 
             if not executable or unmeasured_tainted:
                 wrong_jumps.append(s)
-                logger.error(f'State {s.history.parent} incorrectly jumped to {ip:#x} which is not an allowed code page. Exiting this state.')
+                logger.error(f'State {s.history.parent} incorrectly jumped to {ip:#x} which is not an allowed code region. Exiting this state.')
                 bbl_addrs = list(s.history.bbl_addrs)
                 if len(bbl_addrs) > 0:
                     ui.log_format.dump_asm(s.history.parent, logger, logging.ERROR,
                                            header_msg="Assembly code of the removed state before the jump:",
-                                           use_rip=bbl_addrs[-1],
+                                           use_ip=bbl_addrs[-1],
                                            angr_project=s.project) # Pass the project of the state since history doesn't have it
 
                 # Send this as a system event to the reporter to log it properly
@@ -59,11 +59,11 @@ class ControlFlowTracker(ExplorationTechnique):
                 if buffer_entirely_inside_enclave(s, ip, 15):
                     extra_sec = {'Execution state info': [(
                                  'Disassembly of jump target (not executed)',
-                                 ui.log_format.format_asm(s, formatting=None, angr_project=s.project, use_rip=ip),
+                                 ui.log_format.format_asm(s, formatting=None, angr_project=s.project, use_ip=ip),
                                  'verbatim'
                     )]}
                 ty =  'unmeasured and uninitialized' if unmeasured_tainted else 'non-executable'
-                Reporter().report(f'Aborted branch due to illegal jump to {ty} page',
+                Reporter().report(f'Aborted branch due to illegal jump to {ty} region',
                                   s, logger,
                                   SYSTEM_EVENTS_REPORT_NAME,
                                   severity= logging.ERROR,

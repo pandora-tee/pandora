@@ -1,5 +1,7 @@
 import binascii
 import ctypes
+
+import claripy
 import ui.log_format
 
 import archinfo
@@ -36,7 +38,7 @@ def write_struct_to_memory(state, addr, struct, with_enclave_boundaries=False):
     state.memory.store(addr, bytes(struct), size=ctypes.sizeof(struct), with_enclave_boundaries=with_enclave_boundaries)
 
 def write_bvv_to_memory(state, addr, bvv_str, bits):
-    bvv = state.solver.BVV(bvv_str, bits)
+    bvv = claripy.BVV(bvv_str, bits)
     enclave_file_base = state.project.loader.main_object.mapped_base
     addr = enclave_file_base + addr
     logger.debug(f'Writing BVV {bvv} to addr {addr:#x}.')

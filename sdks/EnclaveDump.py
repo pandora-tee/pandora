@@ -2,7 +2,8 @@ import logging
 import os
 
 import ui
-from sdks.AbstractSDK import AbstractSDK, HasJSONLayout
+from sdks.AbstractSDK import HasJSONLayout
+from sdks.AbstractSGXSDK import AbstractSGXSDK
 from sdks.common import load_struct_from_memory, Tcs, Secs, SgxAttributes
 from utilities.helper import decode_as_json
 
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Keep a global var for the base address since we actually know it before initialization but it depends on the loaded json
 MEMORY_DUMP_BASE_ADDRESS = -1
-class EnclaveDump(AbstractSDK, HasJSONLayout):
+class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
     
     def __init__(self, file_name, init_state, version_str, json_file=None, **kwargs):
         """
@@ -155,14 +156,17 @@ class EnclaveDump(AbstractSDK, HasJSONLayout):
         return self.secs
 
     @staticmethod
-    def get_base_addr():
+    def get_load_addr():
         return MEMORY_DUMP_BASE_ADDRESS
+
+    def get_base_addr(self):
+        EnclaveDump.get_load_addr()
 
     @staticmethod
     def get_angr_backend():
         return 'blob'
 
-    def get_code_pages(self):
+    def get_exec_ranges(self):
         return self.code_pages
 
     @staticmethod

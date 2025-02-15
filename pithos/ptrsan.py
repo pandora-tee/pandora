@@ -1,4 +1,5 @@
 import angr
+import claripy
 
 from explorer import taint
 from ui.report import Reporter
@@ -188,12 +189,12 @@ def _report_error(
      Reports error to the reporter. Appends useful information such as address range and data if available.
      """
     if type(addr) is int:
-        addr = state.solver.BVV(addr, 64)
+        addr = claripy.BVV(addr, 64)
 
     reporter = Reporter()
-    rip = get_reg_value(state, 'rip')
-    symbol = state.project.loader.find_symbol(rip, fuzzy=True)
-    unique = symbol not in reporter.plugins[shortname]['rip']
+    ip = get_reg_value(state, 'ip')
+    symbol = state.project.loader.find_symbol(ip, fuzzy=True)
+    unique = symbol not in reporter.plugins[shortname]['ip']
 
     # Send this event to reporter
     addr_max = state.solver.max(addr)

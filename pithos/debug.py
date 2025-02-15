@@ -102,16 +102,16 @@ def eexit_hook(state: angr.sim_state.SimState):
 
 
 def jmp_hook(state: angr.sim_state.SimState):
-    rip = state.scratch.ins_addr
-    logger.info(f'Jump hook: {str(state.inspect.exit_target)} @{rip}')
+    ip = state.scratch.ins_addr
+    logger.info(f'Jump hook: {str(state.inspect.exit_target)} @{ip}')
 
 def constraints_hook(state: angr.sim_state.SimState):
     constraints = state.inspect.added_constraints
 
     # Break whenever a constraint is added and print the constraint
-    rip = get_reg_value(state, 'rip')
-    # sym = state.project.loader.find_symbol(rip, fuzzy=True)
-    logger.info(f'Constraints hook: {str(constraints)} @{rip}')
+    ip = get_reg_value(state, 'ip')
+    # sym = state.project.loader.find_symbol(ip, fuzzy=True)
+    logger.info(f'Constraints hook: {str(constraints)} @{ip}')
     # state.block().pp() # Do not use this, for some weird reason it breaks stuff?
 
 
@@ -133,14 +133,14 @@ def concretization_hook(state):
     op = state.inspect.address_concretization_action
     stra = state.inspect.address_concretization_strategy
     con = state.inspect.address_concretization_add_constraints
-    rip = state.regs.rip
+    ip = state.regs.ip
 
     # TODO perhaps strategy to concretize as close as possible to the enclave range?!
     if type(res) is list:
         res_str = ','.join([f"{r:#x}" for r in res])
-        logger.info(f'concretizing {op} @{rip} from {addr} to [{res_str}] with extra constraints {con}')
+        logger.info(f'concretizing {op} @{ip} from {addr} to [{res_str}] with extra constraints {con}')
     else:
-        logger.info(f'concretizing {op} @{rip} from {addr} to {res} with extra constraints {con}')
+        logger.info(f'concretizing {op} @{ip} from {addr} to {res} with extra constraints {con}')
     logger.info(f'strategy {stra}')
 #   if res is None and not state.solver.satisfiable():
 #       logger.critical(f'hooking unsat {op} address concretization')

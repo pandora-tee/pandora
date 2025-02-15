@@ -1,12 +1,8 @@
 import subprocess
-import ctypes
-from sdks.common import Secs
 
 class AbstractSDK:
     def __init__(self, elffile, init_state, version_str, **kwargs):
-        self.tcs = None  # to be set by subclass
         self.init_state = init_state
-        self.unmeasured_regions = []
 
     @staticmethod
     def detect(elffile, binpath):
@@ -22,50 +18,36 @@ class AbstractSDK:
         assert len(sdk_version) == 1, f'More than one {sub} string detected.'
         return sdk_version[0][len(sub):]
 
-    def get_tcs(self):
-        """
-        Returns TCS as the address in memory where the TCS is stored.
-        """
-        return self.tcs
-    
-    def get_secs(self):
-        """
-        Returns the SGX Enclave Control Structure (SECS) for this enclave.
-
-        TODO: This is now only implemented for EnclaveDump SDK. Later we can refactor this to be properly used for all SDKs and give sane defaults and replace get_base_address etc.
-        """
-        # Create an empty, zero-initialized SECS structure
-        secs = Secs()
-        secs.size = self.get_encl_size()
-        secs.base = self.get_base_addr()
-        
-        # Set INIT on; DEBUG off; 64bit on; rest off
-        secs.attributes.flags = 0b101
-        # Set XFRM according to a sane default (according to test system)
-        secs.attributes.xfrm = 231
-
-        # Unless SDK subclasses override this, we assume a default SSA framesize of 1 page
-        secs.ssa_frame_size = 1
-        
-        return secs
-
-    def get_unmeasured_pages(self):
-        return self.unmeasured_regions
-
     @staticmethod
     def get_sdk_name():
         raise 'Not implemented'
 
+    def init_eenter_state(self, eenter_state):
+        raise 'Not implemented'
+    
+    def get_unmeasured_pages(self):
+        return []
+    
     def get_encl_size(self):
         raise 'Not implemented'
+    
+    def get_base_addr(self):
+        AbstractSDK.get_load_addr()
 
     @staticmethod
-    def get_base_addr():
+    def get_load_addr():
         """
         @return the base address that this SDK requests to be loaded at.
         Values < 0 are ignored and defaulted to angr
         """
         return -1 # Default: Let angr decide (i.e., skip this setting)
+
+    def get_enclave_range(self):
+        min_addr = self.get_base_addr()
+        # we do minus 1 here because min_addr+size is the first address _outside_
+        # the enclave, and we want to have the range _inclusive_.
+        max_addr = min_addr + self.get_encl_size() - 1
+        return [(min_addr, max_addr)]
 
     @staticmethod
     def get_angr_backend():
@@ -75,6 +57,10 @@ class AbstractSDK:
         """
         return 'elf'
 
+    @staticmethod
+    def get_angr_arch():
+        raise 'Not implemented'
+
     def modify_init_state(self, init_state):
         """
         Receives the init state and gets a last pass of modifying it before execution starts.
@@ -83,6 +69,12 @@ class AbstractSDK:
         """
         pass
 
+    def get_exec_ranges(self):
+        """
+        Optionally return a table of [(addr, size)] with all pages that are executable.
+        """
+        return None
+
     def override_executable(self, addr):
         return False
 
@@ -90,11 +82,6 @@ class HasJSONLayout:
     """
     Additional base class that REQUIRES a JSON layout
     """
-    def get_code_pages(self):
-        """
-        Returns a table of [(addr, size)] with all pages that are executable.
-        """
-        pass
 
     @staticmethod
     def prepare_enclave_offset(json_file):

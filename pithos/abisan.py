@@ -39,8 +39,8 @@ class ABISanitizationPlugin(BasePlugin):
 
     """
 
-    def __init__(self, init_state, encl_size, reporter, usr_act=UserAction.NONE, shortname=abi_shortname):
-        super().__init__(init_state, encl_size, reporter, usr_act, shortname)
+    def __init__(self, init_state, reporter, usr_act=UserAction.NONE, shortname=abi_shortname):
+        super().__init__(init_state, reporter, usr_act, shortname)
 
         # Initialize ignored regs from architectural artificial registers and privileged registers
         global ignored_regs
@@ -50,6 +50,11 @@ class ABISanitizationPlugin(BasePlugin):
     @staticmethod
     def get_help_text():
         return 'Validates CPU register sanitizations.'
+
+    @staticmethod
+    def supports_arch(angr_arch):
+        #TODO this plugin can probably be refactored to be (more) architecture independent
+        return angr_arch == 'x86_64'
 
     def init_globals(self):
         global abi_action, reporter, abi_shortname
@@ -136,15 +141,15 @@ def break_abi_to_api(state):
 
     # 1) Is global api_addr already found?
     if api_addr is None:
-        rip = concretize_value_or_none(state, state.inspect.function_address)
+        ip = concretize_value_or_none(state, state.inspect.function_address)
 
-        if not rip:
-            # Something is horribly wrong. There seems to be more than one concrete solution to the RIP address
+        if not ip:
+            # Something is horribly wrong. There seems to be more than one concrete solution to the IP address
             #  we want to jump to. This should never happen and will also probably crash soon.
-            logger.critical(f'--- ABI2API breakpoint @{rip} seems to be symbolic. Aborting ---')
+            logger.critical(f'--- ABI2API breakpoint @{ip} seems to be symbolic. Aborting ---')
             return
 
-        sym_name = SymbolManager().get_symbol(rip)
+        sym_name = SymbolManager().get_symbol(ip)
         """
         Our heuristic assumes that the first call instruction is the actual api entry point. 
         While surprisingly effective, this is not true for all SDKs.
@@ -159,7 +164,7 @@ def break_abi_to_api(state):
         # If we are still here, assume this is indeed the API breakpoint.
         logger.info(f'--- Found global ABI2API breakpoint @{sym_name} ---')
         dump_regs(state, logger, header_msg='Registers at ABI2API break:')
-        api_addr = rip
+        api_addr = ip
 
         Reporter().report('API entry point', state, logger, abi_shortname, logging.INFO)
 
@@ -274,9 +279,9 @@ def break_abi_eexit(state):
     # Check if we successfully hooked EEXIT in explorer/x86.py
     if state.globals['eexit']:
         # First, dump some info on cli
-        # Get rip just for printing, so it's fine if it stays symbolic (however it logically should never be symbolic)
-        rip = get_reg_value(state, 'rip')
-        logger.debug(f'--- Investigating EEXIT state breakpoint @ {rip:#x} ---')
+        # Get ip just for printing, so it's fine if it stays symbolic (however it logically should never be symbolic)
+        ip = get_reg_value(state, 'ip')
+        logger.debug(f'--- Investigating EEXIT state breakpoint @ {ip:#x} ---')
         dump_regs(state, logger, log_level=logging.DEBUG)
 
         # Check all data registers for their value

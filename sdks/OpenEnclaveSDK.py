@@ -1,6 +1,6 @@
 import logging
 
-from sdks.AbstractSDK import AbstractSDK
+from sdks.AbstractSGXSDK import AbstractSGXSDK
 from sdks.open_enclave_structs import OESgxEnclaveProperties
 
 logger = logging.getLogger(__name__)
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 EXPECTED_SECTION = '.oeinfo'
 
 
-class OpenEnclaveSDK(AbstractSDK):
+class OpenEnclaveSDK(AbstractSGXSDK):
     def __init__(self, elffile, init_state, version_str, **kwargs):
         super().__init__(elffile, init_state, version_str, **kwargs)
 

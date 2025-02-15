@@ -31,7 +31,7 @@ def test_default_memory(state):
    :return: Number of issues during this test.
     """
     global num_issues
-    enclave_min, enclave_max = get_enclave_range()
+    enclave_min, enclave_max = get_enclave_range()[0]
 
     # Test 1
     # TODO: Not sure how to find this...
@@ -43,7 +43,7 @@ def test_default_memory(state):
         _check(state.solver.symbolic(bv) and is_tainted(bv), bv, 'default_memory', 'Non-measured memory is attacker tainted before initialization:')
 
     # Test 3
-    bv = get_sym_memory_value(state, enclave_min-0x1000, 0x10) # Lies outside enclave, potentially with integer underflow.
+    bv = get_sym_memory_value(state, enclave_min-0x1000, 0x10, with_enclave_boundaries=True) # Lies outside enclave, potentially with integer underflow.
     _check(state.solver.symbolic(bv) and is_tainted(bv), bv, 'default_memory', 'Untrusted memory is attacker tainted:')
 
     return num_issues

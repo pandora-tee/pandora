@@ -1,4 +1,5 @@
 import claripy
+from claripy.annotation import UninitializedAnnotation
 
 import logging
 logger = logging.getLogger(__name__)
@@ -97,13 +98,12 @@ def get_tainted_reg(state, reg_name, size):
     """
     attacker_taint = AttackerTaintConservative()
     attacker_taint.set_name(reg_name)
-    return state.solver.BVS(f'{reg_name}_attacker', size,  # key=("{}_attacker".format(reg_name)),
-                            uninitialized=True,
+    return claripy.BVS(f'{reg_name}_attacker', size,  # key=("{}_attacker".format(reg_name)),
                             # annotations=[AttackerTaintLiberal()])
-                            annotations = [attacker_taint])
+                            annotations = [attacker_taint, UninitializedAnnotation()])
 
 
-def get_tainted_mem_bits(state, size, annotations=None, **kwargs):
+def get_tainted_mem_bits(state, size, annotations=None):
     """
     :param state: State to access the solver with
     :param size: size (in bits) to read
@@ -117,10 +117,9 @@ def get_tainted_mem_bits(state, size, annotations=None, **kwargs):
     else:
         annotations = [attacker_taint]
 
-    return state.solver.BVS('attacker_mem', size,
-                            uninitialized=True,
-                            annotations=annotations,
-                            **kwargs)
+    annotations.append(UninitializedAnnotation())
+    return claripy.BVS('attacker_mem', size,
+                            annotations=annotations)
 
 
 def add_taint(bvv):

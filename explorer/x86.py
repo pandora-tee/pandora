@@ -6,6 +6,7 @@ from angr import SimProcedure, SIM_PROCEDURES, BP_BEFORE, BP_AFTER
 import logging
 
 from claripy import BVV
+import claripy
 
 import ui.log_format
 from explorer.enclave import buffer_entirely_inside_enclave
@@ -114,7 +115,7 @@ class SimLdmxcsr(SimProcedure):
         logger.debug(f'storing Pandora shadow register MXCSR={mxcsr}')
         self.state.globals['pandora_mxcsr'] = mxcsr
         sseround_val = (mxcsr & 0x9FFF) >> 13
-        set_reg_value(self.state, 'sseround', self.state.solver.BVV(sseround_val, 64))
+        set_reg_value(self.state, 'sseround', claripy.BVV(sseround_val, 64))
 
         self.jump(self.state.addr + bytes_to_skip)
 
@@ -173,7 +174,7 @@ class SimFxrstor(SimProcedure):
                 for reg_name in self.state.project.arch.register_names.values():
                     if reg_name in x86_fpregs:
                         reg_size = get_reg_bit_size(self.state, reg_name)
-                        reg = self.state.solver.BVV(0, reg_size)
+                        reg = claripy.BVV(0, reg_size)
                         set_reg_value(self.state, reg_name, reg)
 
                 set_reg_value(self.state, 'fc3210', 0x037F)
@@ -184,18 +185,18 @@ class SimFxrstor(SimProcedure):
                 logger.warning('xrstor: partial non-zero xstate_bv not supported; ignoring and restoring supported registers from memory')
 
                 # FC3210 is set to zero and the last four bytes are overwritten with FSW+FCW
-                set_reg_value(self.state, 'fc3210', self.state.solver.BVV(get_int_from_bytes(xrstor_data, 0, 4), 64))
+                set_reg_value(self.state, 'fc3210', claripy.BVV(get_int_from_bytes(xrstor_data, 0, 4), 64))
 
                 # SSEROUND + FPUROUND are both 8byte large but only really consist of 2 bits each
                 # fpu rounding control is bit 10/11 of FCW starting at byte 0 in xrstor data
                 fpuround_val = (get_int_from_bytes(xrstor_data, 0, 2) & 0xF3FF) >> 10
-                set_reg_value(self.state, 'fpround', self.state.solver.BVV(fpuround_val, 64))
+                set_reg_value(self.state, 'fpround', claripy.BVV(fpuround_val, 64))
 
                 # FPU Tag Word: We set fptag to all available _only_ if this is also the case in the given data.
                 # Else, we raise an exception since fptag is complicated and we don't really need it.
                 ftw = get_int_from_bytes(xrstor_data, 4, 0)
                 if self.state.solver.eval(ftw) == 0:
-                    set_reg_value(self.state, 'fptag', self.state.solver.BVV(0xff, 64))
+                    set_reg_value(self.state, 'fptag', claripy.BVV(0xff, 64))
                 else:
                     raise ValueError(f'FXSAVE FTW field is not all zero but {ftw}. This is not supported. Aborting.')
 
@@ -208,7 +209,7 @@ class SimFxrstor(SimProcedure):
                 # NOTE: We do not simulate YMM registers here in Pandora and it must suffice to simulate the XMM registers.
                 for i in range(0, 16):
                     set_reg_value(self.state, f'ymm{i}',
-                                self.state.solver.BVV(0, 32*8) + get_int_from_bytes(xrstor_data, 160 + (i * 16), 16))
+                                claripy.BVV(0, 32*8) + get_int_from_bytes(xrstor_data, 160 + (i * 16), 16))
 
             # NOTE: in the standard, non-compacted form of XRSTOR (XCOMP_BV[63] = 0), mxcsr is always read from memory, regardless of xstate_bv
             # sse rounding control is in bit 13/14 of the MXCSR starting @ byte 8+16 in xrstor data.
@@ -219,7 +220,7 @@ class SimFxrstor(SimProcedure):
             logger.debug(f'xrstor: storing Pandora shadow register MXCSR={mxcsr:#x}')
             self.state.globals['pandora_mxcsr'] = mxcsr
             sseround_val = (mxcsr & 0x9FFF) >> 13
-            set_reg_value(self.state, 'sseround', self.state.solver.BVV(sseround_val, 64))
+            set_reg_value(self.state, 'sseround', claripy.BVV(sseround_val, 64))
 
         else:
             # Opcode is malformed or unexpected.
@@ -228,7 +229,7 @@ class SimFxrstor(SimProcedure):
             for reg_name in self.state.project.arch.register_names.values():
                 if reg_name in x86_fpregs:
                     reg_size = get_reg_bit_size(self.state, reg_name)
-                    reg = self.state.solver.BVV(0, reg_size)
+                    reg = claripy.BVV(0, reg_size)
                     set_reg_value(self.state, reg_name, reg)
 
         #ui.log_format.dump_regs(self.state, logger, logging_criticality, header_msg='Regs after fxrstor:')
@@ -254,7 +255,7 @@ class SimFxsave(SimProcedure):
             dest_addr = get_opstr_addr(self.state, opstr, bytes_to_skip)
 
             xsave_bitsize = 512 * 8
-            xsave_data = self.state.solver.BVV(0, xsave_bitsize)
+            xsave_data = claripy.BVV(0, xsave_bitsize)
 
             # Data style is https://www.felixcloutier.com/x86/fxsave#tbl-3-46
             # Angr registers are initialized here https://github.com/angr/archinfo/blob/master/archinfo/arch_amd64.py
@@ -274,7 +275,7 @@ class SimFxsave(SimProcedure):
             for i in range(0, 8):
                 if not ftw & (0b11 << 2 * i):
                     stored_tw |= (0b1 << i)
-            xsave_data += self.state.solver.BVV(stored_tw, xsave_bitsize) << 4
+            xsave_data += claripy.BVV(stored_tw, xsave_bitsize) << 4
 
             # x87 FPU: mmX data is stored in xsave_data at byte 32 at the zero offsets of each successive 16byte row
             for i in range(0, 8):
@@ -342,9 +343,9 @@ class SimEnclu(SimProcedure):
 
             # simulate a successful egetkey, so the enclave runtime does not abort
             dest_addr = get_reg_value(self.state, 'rcx')
-            key_data = self.state.solver.BVV(0xdeadbeefcafebabec0defeeddefec8ed, 128)
+            key_data = claripy.BVV(0xdeadbeefcafebabec0defeeddefec8ed, 128)
             set_memory_value(self.state, dest_addr, key_data, with_enclave_boundaries=True)
-            set_reg_value(self.state, 'rax', self.state.solver.BVV(0, 64))
+            set_reg_value(self.state, 'rax', claripy.BVV(0, 64))
             self.state.regs.cc_op = 0  # OP_COPY
             self.state.regs.cc_dep1 = 0
 
@@ -366,7 +367,7 @@ class SimEnclu(SimProcedure):
             # Do not actively exit this state but just make it jump back to entry.
             # Engine will take care to reset the successor before stepping it.
             self.successors.add_successor(self.state, SDKManager().get_oentry_addr(),
-                                          self.state.solver.true, 'Ijk_Boring')
+                                          claripy.true(), 'Ijk_Boring')
 
             # Lastly, call eexit breakpoint again (AFTER)
             self.state._inspect(
@@ -377,7 +378,7 @@ class SimEnclu(SimProcedure):
         elif self.state.solver.eval(self.state.regs.eax == 0x5):
             logger.debug("EACCEPT")
             # Intel SDK expects EAX to be 0 after a successful EACCEPT, otherwise it will abort.
-            set_reg_value(self.state, 'rax', self.state.solver.BVV(0, 64))
+            set_reg_value(self.state, 'rax', claripy.BVV(0, 64))
             self.jump(self.state.addr + enclu_length_in_bytes)
         else:
             logger.critical(f"Unexpected ENCLU with rax {self.state.regs.eax}")
@@ -394,7 +395,7 @@ class SimVzeroall(SimProcedure):
         logger.debug('hooking VZEROALL. Zeroing YMM registers 0-15')
 
         for i in range(0, 16):
-            set_reg_value(self.state, f'ymm{i}', self.state.solver.BVV(0, 32))
+            set_reg_value(self.state, f'ymm{i}', claripy.BVV(0, 32))
         
         self.jump(self.state.addr + bytes_to_skip)
 
@@ -503,7 +504,7 @@ def _enclave_handle_memset(state, dst, val, size):
         logger.debug(f'SimMemset: Performing memset to {dst} with {val} with size of {size}')
         memset = SIM_PROCEDURES['libc']["memset"]
         # Memset expects val to be a BV of size 8 so cast it into a BVV
-        memset().execute(state, arguments=[dst, state.solver.BVV(val, 8), size])
+        memset().execute(state, arguments=[dst, claripy.BVV(val, 8), size])
         self.ret(dst)
 
 class SimMemset(SimProcedure):
@@ -677,7 +678,7 @@ class Rdrand(angr.SimProcedure):
         }
         if not reg_size in hex_vals.keys():
             raise ValueError(f'rdrand on unknown register size {reg_size} (opcode {opstr})')
-        val = self.state.solver.BVV(hex_vals[reg_size], reg_size * 8)
+        val = claripy.BVV(hex_vals[reg_size], reg_size * 8)
         logger.debug(f"hooking rdrand by setting {opstr} to {val}")
         set_reg_value(self.state, opstr, val)
 

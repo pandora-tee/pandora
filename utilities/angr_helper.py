@@ -1,6 +1,7 @@
 import logging
 
 import archinfo
+import claripy
 import explorer.taint as taint
 
 logger = logging.getLogger(__name__)
@@ -105,7 +106,7 @@ def get_sym_memory_value(state, address, size, with_enclave_boundaries=False):
     :return: BVS
     """
     if type(address) is int:
-        address = state.solver.BVV(address, 64)
+        address = claripy.BVV(address, state.arch.bits)
     bvs = state.memory.load(address, size, disable_actions=True, inspect=False, with_enclave_boundaries=with_enclave_boundaries)
     return bvs
 
@@ -131,7 +132,7 @@ def symbolize_memory_value(state, address, size_bytes, with_enclave_boundaries=F
 
     Size is in bytes(!)
     """
-    bvs = state.solver.BVS('symbolized_memory', size_bytes*8)
+    bvs = claripy.BVS('symbolized_memory', size_bytes*8)
     state.memory.store(address, bvs, with_enclave_boundaries=with_enclave_boundaries)
 
 def memory_is_tainted(state, address, size):

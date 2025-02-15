@@ -7,13 +7,14 @@ from rich.table import Table
 from rich.theme import Theme
 
 import re
-from angr.errors import SimEngineError
 
 from explorer import taint
 from utilities.angr_helper import get_reg_value
 from explorer.x86 import x86_arch_regs, x86_privileged_regs
 from sdks.SymbolManager import SymbolManager
 
+import logging
+logger = logging.getLogger(__name__)
 
 # workaround to make rich print hex numbers and strings without enclosing
 # quotation marks
@@ -181,7 +182,8 @@ def format_regs(state, only_gen_purpose=False, exit=False):
 
     for reg_name in state.project.arch.register_names.values():
         # skip internal angr pseudo registers
-        if reg_name in state.project.arch.artificial_registers or \
+        artificial_registers = getattr(state.project.arch, 'artificial_registers', [])
+        if reg_name in artificial_registers or \
                 reg_name in x86_arch_regs or \
                 reg_name in x86_privileged_regs:
             continue
@@ -267,52 +269,54 @@ def get_state_backtrace_compact(state):
         sym_name_prev = sym_name
     return bbt
 
-def format_asm(state, formatting=None, angr_project=None, use_rip=None, highlight_rip=None):
+def format_asm(state, formatting=None, angr_project=None, use_ip=None, highlight_ip=None):
     """
-    :param use_rip: Allows to overwrite the rip that is dumped. Useful for when the state is actually a
+    :param use_ip: Allows to overwrite the ip that is dumped. Useful for when the state is actually a
     history state with no registers anymore.
     :param angr_project: Overwrite the angr project. Useful for when the state is actually a
     history state with no registers anymore.
-    :param highlight_rip: None or a hex string
+    :param highlight_ip: None or a hex string
     """
     if angr_project is None:
         angr_project = state.project
 
-    if use_rip is None:
+    if use_ip is None:
         if state.scratch.bbl_addr is not None:
-            rip = state.scratch.bbl_addr
+            ip = state.scratch.bbl_addr
         else:
-            rip = get_reg_value(state, 'rip')
+            ip = get_reg_value(state, 'ip')
     else:
-        rip = use_rip
-
+        ip = use_ip
+    
+    current_block = angr_project.factory.block(ip)
     try:
-        current_block = angr_project.factory.block(rip)
-        disasm = angr_project.analyses.Disassembly(ranges=[(current_block.addr, current_block.addr + current_block.size)])
+        disasm = angr_project.analyses.Disassembly(ranges=[(current_block.addr, current_block.addr +current_block.size)])
         pp = disasm.render(formatting=formatting)
         pp = re.sub(r'0x[0-9a-f]+', lambda h: SymbolManager().get_hex_symbol(int(h.group(),base=16)), pp)
         ins_list = [f'\t{line.lstrip()}\n' for line in pp.split('\n')]
-        if highlight_rip:
-            usable_rip = f'{highlight_rip:x}'
+        if highlight_ip:
+            usable_ip = f'{highlight_ip:x}'
             for idx, ins_str in enumerate(ins_list):
-                if usable_rip in ins_str:
+                if usable_ip in ins_str:
                     ins_list[idx] = 'x' + ins_str
                     break
-
         pretty_print_str = "".join(ins_list)
-    except SimEngineError as se:
-        pretty_print_str= f'\tSimEngineError when disassembling: {se}\n'
-
-
+    except Exception as e:
+        # VEX does not support disassembly for MSP430 so we work around that
+        # here by calling objdump externally
+        arch = angr_project.arch.name.lower()
+        logger.debug(f"Exception '{e.__class__.__name__}' when disassembling; falling back to {arch}-objdump..")
+        pretty_print_str = SymbolManager().get_objdump(ip, ip+current_block.size, arch=arch)
+    
     # print('---- BEGIN VEX ----')
-    # proj.factory.block(rip).vex.pp()
+    # proj.factory.block(ip).vex.pp()
     # print('---- END VEX ----')
 
     return pretty_print_str
 
-def dump_asm(state, logger, log_level=logging.DEBUG, header_msg="", angr_project=None, use_rip=None):
+def dump_asm(state, logger, log_level=logging.DEBUG, header_msg="", angr_project=None, use_ip=None):
     """
-    :param use_rip: Allows to overwrite the rip that is dumped. Useful for when the state is actually a
+    :param use_ip: Allows to overwrite the ip that is dumped. Useful for when the state is actually a
     history state with no registers anymore.
     :param angr_project: Overwrite the angr project. Useful for when the state is actually a
     history state with no registers anymore.
@@ -320,16 +324,16 @@ def dump_asm(state, logger, log_level=logging.DEBUG, header_msg="", angr_project
     if angr_project is None:
         angr_project = state.project
 
-    asm = format_asm(state, angr_project=angr_project, use_rip=use_rip)
-    if use_rip is not None:
-        rip = use_rip
+    asm = format_asm(state, angr_project=angr_project, use_ip=use_ip)
+    if use_ip is not None:
+        ip = use_ip
     else:
         if state.scratch.bbl_addr is not None:
-            rip = state.scratch.bbl_addr
+            ip = state.scratch.bbl_addr
         else:
-            rip = get_reg_value(state, 'rip')
+            ip = get_reg_value(state, 'ip')
 
-    sym = SymbolManager().get_symbol(rip)
+    sym = SymbolManager().get_symbol(ip)
 
     log_msg = format_header(header_msg) \
               + format_inline_header(f'\n\t---- BEGIN ASM ({sym}) ----') \

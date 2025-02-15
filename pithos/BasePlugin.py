@@ -7,9 +7,8 @@ class BasePlugin:
     An abstract base class specifying the interface for Pandora plugins.
     """
 
-    def __init__(self, init_state, encl_size, reporter, usr_act=UserAction.NONE, shortname=''):
+    def __init__(self, init_state, reporter, usr_act=UserAction.NONE, shortname=''):
         self.action = usr_act
-        self.encl_size = encl_size
         self.reporter = reporter
         self.shortname = shortname
 
@@ -58,5 +57,13 @@ class BasePlugin:
         By default, all plugins are seen as default plugins. However some blow up
         runtime so much that they exclude themselves from that list. If this is set to
         false, then the plugin is still included when the all option is set though.
+        """
+        return True
+
+    @staticmethod
+    def supports_arch(angr_arch):
+        """
+        By default, plugins are supposed to be architecture-independent, but this can be
+        overriden so they are only activated on selected architectures.
         """
         return True

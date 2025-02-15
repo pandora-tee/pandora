@@ -1,6 +1,6 @@
 import logging
 
-from sdks.AbstractSDK import AbstractSDK
+from sdks.AbstractSGXSDK import AbstractSGXSDK
 from sdks.common import write_struct_to_memory, write_bvv_to_memory, Tcs
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ TCS_OFFSET = 0x4974000       # offset from enclave base to tcs
 def zero_init_page(init_state, rel_addr):
     write_bvv_to_memory(init_state, rel_addr, b'\00' * PAGE_SIZE, bits=8*PAGE_SIZE)
 
-class Scone(AbstractSDK):
+class Scone(AbstractSGXSDK):
     def __init__(self, elffile, init_state, version_str, **kwargs):
         super().__init__(elffile, init_state, version_str, **kwargs)
         logger.debug(f'Initializing basic TCS.')
@@ -86,9 +86,12 @@ class Scone(AbstractSDK):
         return 0x8000000
 
     @staticmethod
-    def get_base_addr():
+    def get_load_addr():
         return 0x1000000000
 
+    def get_base_addr(self):
+        return Scone.get_load_addr()
+    
     def modify_init_state(self, init_state):
         # Scone can be sped up if RDX is set to 3 at initialization (the thread that performs the work)
         # hack to limit paths
