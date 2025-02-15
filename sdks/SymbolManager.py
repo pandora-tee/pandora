@@ -33,7 +33,9 @@ class SymbolManager(metaclass=Singleton):
     def get_objdump(self, start, end, arch='x86_64'):
         objdump = 'objdump'
         if 'x86' not in arch:
-            objdump = f'{arch.lower()}-objdump'
+            # XXX we keep a local copy of MSPGCC msp430-objdump 2.21.1 (mspgcc LTS 20120406 unpatched)
+            # as newer objdump seems to forcibly interpret Sancus instructions as 20-bit CALLA instructions..
+            objdump = f'./bin/{arch.lower()}-objdump'
         d = subprocess.run([objdump, '-D', self.exec_path], capture_output=True)
         g = subprocess.run(['sed', '-n', f'/^[ 0]*{start:x}/,/^.*{end:x}/p'], input=d.stdout,capture_output=True)
         h = subprocess.run(['head', '-n', '-1'], input=g.stdout, capture_output=True)

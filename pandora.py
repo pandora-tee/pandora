@@ -127,7 +127,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         Angr setup
         """
         # Run the hooker for SGX specific instructions and settings
-        hooker.HookerManager(init_state, sdk_mgr.get_code_page_information(), live_console=console_progress, task=task_hooker)
+        hooker.HookerManager(init_state, sdk_mgr.get_code_page_information(), live_console=console_progress, task=task_hooker, angr_arch=sdk_mgr.get_angr_arch())
 
         # Simulate eenter on the init_state
         eenter(init_state)

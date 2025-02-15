@@ -1,22 +1,80 @@
 from __future__ import annotations
+import re
 
 import angr
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64
 
 import ui.log_format
 from explorer.x86 import SimEnclu, Rdrand, SimFxrstor, SimRep, SimVzeroall, SimFxsave, SimMemcpy, SimMemcmp, SimMemset, SimRet, SimAbort, SimLdmxcsr, SimNop
+from explorer.sancus_hooks import SimUnprotect, SimProtect, SimAttest, SimEncrypt, SimDecrypt, SimGetID, SimGetCallerID, SimNop
 from sdks.SymbolManager import SymbolManager
 
 import logging
 
 logger = logging.getLogger(__name__)
 
+class AbstractHooker:
+    def __init__(self, init_state):
+        self.init_state = init_state
+        self.project = init_state.project
 
-class HookerManager:
+    def hook_mem_region(self, addr, size):
+        raise NotImplementedError
+
+class SancusHooker(AbstractHooker):
+
+    instruction_hooks = { 
+        '0x1380': SimUnprotect,
+        '0x1381': SimProtect,
+        '0x1382': SimAttest,
+        '0x1384': SimEncrypt,
+        '0x1385': SimDecrypt,
+        '0x1386': SimGetID,
+        '0x1387': SimGetCallerID,
+        '0x1388': SimNop,
+        '0x1389': SimNop,
+    }
+
+    def hook_mem_region(self, addr, size):
+        SANCUS_INSTR_SIZE=2
+        entry_sym = SymbolManager().get_symbol_exact(addr)
+        if entry_sym and re.search(r'__sm_(\w+)_entry', entry_sym):
+            logger.debug(f'Hooking enclave section {addr:#x}:{size} ({entry_sym})')
+            disasm = SymbolManager().get_objdump(addr, addr+size, arch='msp430')
+            
+            for (addr, opcode) in self.get_sancus_instr_addresses(disasm.splitlines()):
+                sim_proc = self.instruction_hooks[opcode](opstr="", bytes_to_skip=2, mnemonic=opcode)
+                tab_str = f'{addr}:\t{opcode:<10}\t{sim_proc.__class__.__name__:<20}\t{str(SANCUS_INSTR_SIZE):<3}'
+                logger.debug(tab_str)
+                self.project.hook(int(addr, 16), hook=sim_proc, length=SANCUS_INSTR_SIZE)
+        else:
+            logger.debug(f"Skipping non-enclave section {addr:#x}:{size} ({entry_sym})")
+
+    """
+    Return a list with (address-opcode) pairs of all Sancus related instructions
+    @param section: [String]
+        a list of strings containing the objdump of the project
+    @return [(address, opcode)]
+        a list with address opcode pairs
+    """
+    def get_sancus_instr_addresses(self, section):
+        instructions = []
+        # Regex for following kind of line:
+        #    6ca4:       86 13           .word   0x1386
+        # where the address and the opcode (0x1386) get captured
+        regex = re.compile(r'^\s{4}([0-9A-Fa-f]+).*\.word\s*(0x[0-9A-Fa-f]+)')
+        for instr in section:
+            if '.word' in instr:
+                match = regex.match(instr)
+                addr = match.group(1)
+                op = match.group(2)
+                instructions.append(('0x' + str(addr), op))
+        return instructions
+
+class SGXHooker(AbstractHooker):
     """
     This class manages the hooking of instructions. It is loosely based on Guardian's class of the same name.
     """
-
     fct_map = { 'memcpy'                  : SimMemcpy,
                 'memset'                  : SimMemset,
                 'memcmp'                  : SimMemcmp,
@@ -29,55 +87,16 @@ class HookerManager:
                 'mbedtls_aesni_crypt_ecb' : SimRet,
               }
     fct_addr_map = {}
-    sim_abort_count = 0
 
-    def __init__(self, init_state, code_pages = None, live_console=None, task=None):
-        self.init_state = init_state
-        self.project = init_state.project
-        self.code_pages = code_pages
-
-        logger.info("Hooking instructions.")
+    def __init__(self, init_state):
+        super().__init__(init_state)
+        self.md = Cs(CS_ARCH_X86, CS_MODE_64)
+        self.md.skipdata = True
 
         for f, proc in self.fct_map.items():
             addr = self.hook_fct_addr(f)
             if addr:
                 self.fct_addr_map[addr] = (f, proc())
-
-        self.md = Cs(CS_ARCH_X86, CS_MODE_64)
-        self.md.skipdata = True
-
-        loop_count = 0
-        # Distinguish between elf loading and dump loading: sections may be empty
-        section_count = len(self.project.loader.main_object.sections)
-        logger.debug(f'Address        \tInstruction\tOpstr               \tSize [Replacement function]')
-        if section_count != 0:
-            # Normal elf file, pick executable sections and start hooking
-            if live_console:
-                live_console.update(task, total=section_count, completed=0)
-            for section in self.project.loader.main_object.sections:
-                # note: skip NOBITS sections that are uninitialized
-                if section.is_executable and not section.only_contains_uninitialized_data:
-                    self.hook_mem_region(section.vaddr, section.memsize)
-                loop_count += 1
-                live_console.update(task, completed=loop_count)
-        else:
-            # Not a normal elf file. In this case, utilize the code pages we got
-            if not code_pages:
-                logger.error(ui.log_format.format_error(f"Can't hook without a memory layout yet!"))
-                exit(1)
-
-            total_count = len(self.code_pages)
-            if live_console:
-                live_console.update(task, total=total_count, completed=0)
-            for (offset, count) in self.code_pages:
-                self.hook_mem_region(offset, count)
-                loop_count += 1
-                live_console.update(task, completed=loop_count)
-
-            if self.sim_abort_count > 0:
-                logger.debug(f'Also hooked {self.sim_abort_count} instructions for abort (ud2, int3 etc).')
-
-        logger.info("Hooking instructions completed.")
 
     def hook_fct_addr(self, name):
         addr = SymbolManager().symbol_to_addr(name)
@@ -85,7 +104,7 @@ class HookerManager:
             logger.debug(ui.log_format.format_fields(f'hooking function <{name}> at {addr:#x}'))
             logger.debug(ui.log_format.format_asm(self.init_state, use_ip=addr))
         return addr
-
+    
     def hook_mem_region(self, addr, size):
         """
         Hooks a whole memory region at once with SimProcedures.
@@ -108,12 +127,8 @@ class HookerManager:
 
                 if type(sim_proc) is not SimAbort:
                     logger.debug(tab_str)
-                else:
-                    self.sim_abort_count += 1
 
                 self.project.hook(i.address, hook=sim_proc, length=i.size)
-
-
 
     # Prepare a dict with instruction replacements and their replacement class
     instruction_hooks = {
@@ -156,3 +171,46 @@ class HookerManager:
         # Default case: No replacement
         else:
             return None
+
+#XXX this could also be passed via the SDKManager if we get >1 TEE-specific hooker per architecture
+HOOKERS = {
+    'x86_64' : SGXHooker,
+    'msp430' : SancusHooker
+}
+
+class HookerManager:
+    def __init__(self, init_state, code_pages = None, live_console=None, task=None, angr_arch='x86_64'):
+        self.init_state = init_state
+        self.project = init_state.project
+        self.code_pages = code_pages
+        self.hooker = HOOKERS[angr_arch](init_state)
+
+        logger.info("Hooking instructions.")
+        loop_count = 0
+        # Distinguish between ELF and memory dump: sections may be empty
+        section_count = len(self.project.loader.main_object.sections)
+        logger.debug(f'Address        \tInstruction\tOpstr               \tSize [Replacement function]')
+        if section_count != 0:
+            # Normal elf file, pick executable sections and start hooking
+            if live_console:
+                live_console.update(task, total=section_count, completed=0)
+            for section in self.project.loader.main_object.sections:
+                # note: skip NOBITS sections that are uninitialized
+                if section.is_executable and not section.only_contains_uninitialized_data:
+                    self.hooker.hook_mem_region(section.vaddr, section.memsize)
+                loop_count += 1
+                live_console.update(task, completed=loop_count)
+        else:
+            # Not a normal elf file. In this case, utilize the code pages we got
+            if not code_pages:
+                logger.error(ui.log_format.format_error(f"Can't hook without a memory layout yet!"))
+                exit(1)
+
+            total_count = len(self.code_pages)
+            if live_console:
+                live_console.update(task, total=total_count, completed=0)
+            for (offset, count) in self.code_pages:
+                self.hooker.hook_mem_region(offset, count)
+                loop_count += 1
+                live_console.update(task, completed=loop_count)
+        logger.info("Hooking instructions completed.")
