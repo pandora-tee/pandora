@@ -1,10 +1,8 @@
 from __future__ import annotations
-import ctypes
 
 import logging
-
-from angr import BP_BEFORE, BP_AFTER, SimValueError
-
+from angr import BP_BEFORE, BP_AFTER
+import claripy
 from sdks.SDKManager import SDKManager
 from explorer import taint
 from utilities.angr_helper import set_reg_value, get_reg_size
@@ -36,6 +34,7 @@ def eenter(eenter_state):
     
     # Set the eexit global to False
     eenter_state.globals['eexit'] = False
+    eenter_state.globals['protections_disabled'] = False
 
     # This will be set when the state encounters an event that would cause a hardware exception/fault,
     # so as to abort the symbolic execution path
@@ -68,7 +67,7 @@ restrict the caching to addr and length plus the enclave range.
 @lru_cache(maxsize=256, typed=False)
 def _check_touches(addr, length, enclave_min_addr, enclave_max_addr, solver):
     if type(addr) is int:
-        bv_addr = solver.BVV(addr, 64)
+        bv_addr = claripy.BVV(addr, 64)
     else:
         # If addr is not an int, we can assume it is a BV
         bv_addr = addr
@@ -91,7 +90,7 @@ def _check_touches(addr, length, enclave_min_addr, enclave_max_addr, solver):
     max_addr_before_enclave = enclave_min_addr - length
 
     # The simplest check is max_addr_before_enclave < addr < enclave_max_addr
-    touches_enclave = solver.And(bv_addr.UGT(max_addr_before_enclave), bv_addr.ULE(enclave_max_addr))
+    touches_enclave = claripy.And(bv_addr.UGT(max_addr_before_enclave), bv_addr.ULE(enclave_max_addr))
 
     if max_addr_before_enclave < 0:
         # We have to be careful about overflow here
@@ -99,22 +98,22 @@ def _check_touches(addr, length, enclave_min_addr, enclave_max_addr, solver):
 
         # Either, the addr wraps the address space (overflows): Then, check whether the end reaches around
         does_wrap = bv_addr.UGE(bv_addr + length)
-        wrap_and_touches_enclave = solver.And(bv_addr.UGT(max_addr_before_enclave), does_wrap)
+        wrap_and_touches_enclave = claripy.And(bv_addr.UGT(max_addr_before_enclave), does_wrap)
 
         # If the addr does not wrap, then do the normal check with an overwritten max_addr_before_enclave
         does_not_wrap = bv_addr.ULT(bv_addr + length)
         bv_addr_end = bv_addr + length - 1 # Inclusive end
-        touches_enclave = solver.Or(
+        touches_enclave = claripy.Or(
             # Either the buffer start is inside the enclave range
-            solver.And(bv_addr.UGE(enclave_min_addr), bv_addr.ULE(enclave_max_addr)),
+            claripy.And(bv_addr.UGE(enclave_min_addr), bv_addr.ULE(enclave_max_addr)),
             # Or the buffer end is inside the enclave range
-            solver.And(bv_addr_end.UGE(enclave_min_addr), bv_addr_end.ULE(enclave_max_addr)),
+            claripy.And(bv_addr_end.UGE(enclave_min_addr), bv_addr_end.ULE(enclave_max_addr)),
             # Or the start is before the enclave start AND the end is after the enclave end (encapsulates the enclave)
-            solver.And(bv_addr.ULE(enclave_min_addr), bv_addr_end.UGE(enclave_max_addr))
+            claripy.And(bv_addr.ULE(enclave_min_addr), bv_addr_end.UGE(enclave_max_addr))
         )
-        no_wrap_and_touches = solver.And(does_not_wrap, touches_enclave)
+        no_wrap_and_touches = claripy.And(does_not_wrap, touches_enclave)
 
-        e = solver.Or(wrap_and_touches_enclave, no_wrap_and_touches)
+        e = claripy.Or(wrap_and_touches_enclave, no_wrap_and_touches)
 
     else:
         # No overflow into enclave possible. Do the normal check
@@ -169,12 +168,12 @@ def _check_entirely_inside(addr, length, enclave_min_addr, enclave_max_addr, sol
         return False
 
     if type(addr) is int:
-        bv_addr = solver.BVV(addr, 64)
+        bv_addr = claripy.BVV(addr, 64)
     else:
         # If addr is not an int, we can assume it is a BV
         bv_addr = addr
 
-    can_lie_outside = solver.Or(bv_addr.ULT(enclave_min_addr), bv_addr.UGT(max_allowed_addr_inside_enclave))
+    can_lie_outside = claripy.Or(bv_addr.ULT(enclave_min_addr), bv_addr.UGT(max_allowed_addr_inside_enclave))
 
     """
     The buffer can wrap around (overflow), if the last byte in the buffer (inclusive) may be smaller than the address.
@@ -182,7 +181,7 @@ def _check_entirely_inside(addr, length, enclave_min_addr, enclave_max_addr, sol
     """
     can_wrap = bv_addr.UGT(bv_addr + length - 1)
 
-    e = solver.Or(can_lie_outside, can_wrap)
+    e = claripy.Or(can_lie_outside, can_wrap)
     return not solver.satisfiable(extra_constraints=[e])
 
 

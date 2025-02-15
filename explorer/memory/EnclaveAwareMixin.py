@@ -1,5 +1,5 @@
 from angr import BP_AFTER, BP_BEFORE
-from angr.storage import MemoryMixin
+from angr.storage.memory_mixins.memory_mixin import MemoryMixin
 import logging
 import pandora_options as po
 
@@ -19,7 +19,7 @@ class EnclaveAwareMixin(MemoryMixin):
         # Only enable the mixin if store is called with_enclave_boundaries (default on)
         mixin_enabled = self.category == 'mem' \
                         and with_enclave_boundaries \
-                        and po.PANDORA_ENCLAVE_MIXIN_ENABLE in self.state.options
+                        and po.PandoraOptions().get_option(po.PANDORA_ENCLAVE_MIXIN_ENABLE)
 
         if mixin_enabled:
             if buffer_entirely_inside_enclave(self.state, addr, size):
@@ -94,10 +94,11 @@ class EnclaveAwareMixin(MemoryMixin):
         read_was_in_trusted_mem = False
         breakpoint_event = ''
 
+
         # Only enable the mixin if load is called with_enclave_boundaries (default on)
         # For enclave memory, we only care about memory loads
         mixin_enabled = with_enclave_boundaries \
-                        and po.PANDORA_ENCLAVE_MIXIN_ENABLE in self.state.options \
+                        and po.PandoraOptions().get_option(po.PANDORA_ENCLAVE_MIXIN_ENABLE) \
                         and self.category == 'mem'
 
         if mixin_enabled :

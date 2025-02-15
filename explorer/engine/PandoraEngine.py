@@ -1,5 +1,5 @@
 from angr.engines import SimEngineFailure, SimEngineSyscall, HooksMixin, TrackActionsMixin, \
-    SimInspectMixin, HeavyResilienceMixin, HeavyVEXMixin, TLSMixin
+    SimInspectMixin, HeavyResilienceMixin, HeavyVEXMixin
 
 
 
@@ -14,6 +14,5 @@ class PandoraEngine(
         HeavyResilienceMixin,
         # SootMixin, # For Java
         HeavyVEXMixin,
-        TLSMixin,
 ):
     pass

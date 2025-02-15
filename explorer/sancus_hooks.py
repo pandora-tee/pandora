@@ -107,8 +107,8 @@ class SimGetID(SimProcedure):
         #WE SAY THAT THE UNTRUSTED CONTEXT PASSED A VALID RETURN ADDRESS (set r15 to 0 which is the ID of untrusted context), 
         #BUT OUR SYMBOLIC MODEL DOESNT KNOW THIS YET, SO R7 HAS TO BE CONSTRAINED HERE
         #SOMETHING LIKE THIS: 
-        #outside_text = solver.Or(state.regs.r7 < text_min, state.regs.r7 > text_max)
-        #outside_data = solver.Or(state.regs.r7 < data_min, state.regs.r7 > data_max)
+        #outside_text = claripy.Or(state.regs.r7 < text_min, state.regs.r7 > text_max)
+        #outside_data = claripy.Or(state.regs.r7 < data_min, state.regs.r7 > data_max)
 
         #BUT this will also be reported as a critical issue see:
         #CFSAN: Symbolic -> (if buffer_entirely_inside_enclave? else report CRITICAL!)

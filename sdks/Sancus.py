@@ -74,9 +74,6 @@ class SancusSDK(AbstractSDK):
     def init_eenter_state(self, eenter_state):
         set_reg_value(eenter_state, 'ip', self.textStart)
 
-        #Indicate the protections as enabled (should only be disabled by 0x1380)
-        eenter_state.globals['protections_disabled'] = False
-
         #Indicate states where the code writes to its own text section (such that these can be removed to errored stash)
         eenter_state.globals['sancus_text_range'] = (self.textStart, self.textEnd-1)
         eenter_state.inspect.b('trusted_mem_write', when=BP_AFTER, action=check_write_to_text_section)

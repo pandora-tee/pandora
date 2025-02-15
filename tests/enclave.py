@@ -5,6 +5,8 @@ Tests for enclave.py to ensure that the enclave range checks return the correct 
 
 import logging
 
+import claripy
+
 import ui.log_format
 from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave, _check_entirely_inside, \
     _check_touches
@@ -47,7 +49,7 @@ def _check(state, func, inner_func, case_str, expect, test_addr, test_length, te
         assert ci1.misses == ci0.misses + 1
 
     # Now do some checks symbolically
-    sym = state.solver.BVS('symbolic', 64)
+    sym = claripy.BVS('symbolic', 64)
     s2 = state.copy()
     s2.solver.add(sym == test_addr)
     rv1 = _check_one(s2, func, case_str, expect, sym, test_length, test_enclave_range)
@@ -71,7 +73,7 @@ def test_buffer_touches_enclave(state):
     global num_issues
     num_issues = 0
     logger.info('Beginning test buffer_touches_enclave.')
-    sym = state.solver.BVS('symbolic', 64)
+    sym = claripy.BVS('symbolic', 64)
 
     def _check_touches_enclave(case_str, expect, test_addr, test_length, test_enclave_range):
         _check(state, buffer_touches_enclave, _check_touches, case_str, expect, test_addr, test_length, test_enclave_range)
@@ -112,7 +114,7 @@ def test_buffer_touches_enclave(state):
     logger.info(f'Testing for enclave range [{enclave_range[0]:#x}, {enclave_range[1]:#x}]')
 
     # 1. Symbolic
-    _check_touches_enclave('Case 01', True, state.solver.BVS('symbolic',64), 10, enclave_range)
+    _check_touches_enclave('Case 01', True, claripy.BVS('symbolic',64), 10, enclave_range)
 
     # 2-5. Outside/Inside
     _check_touches_enclave('Case 02', False, 0, 10, enclave_range)
@@ -147,7 +149,7 @@ def test_buffer_touches_enclave(state):
     logger.info(f'Testing for enclave range [{enclave_range[0]:#x}, {enclave_range[1]:#x}]')
 
     # 1. Symbolic
-    _check_touches_enclave('Case 01', True, state.solver.BVS('symbolic',64), 10, enclave_range)
+    _check_touches_enclave('Case 01', True, claripy.BVS('symbolic',64), 10, enclave_range)
 
     # 2-5. Outside/Inside
     _check_touches_enclave('Case 02', True, 0, 10, enclave_range) # NOW TRUE
@@ -183,7 +185,7 @@ def test_buffer_touches_enclave(state):
     logger.info(f'Testing for enclave range [{enclave_range[0]:#x}, {enclave_range[1]:#x}]')
 
     # 1. Symbolic
-    _check_touches_enclave('Case 01', True, state.solver.BVS('symbolic',64), 10, enclave_range)
+    _check_touches_enclave('Case 01', True, claripy.BVS('symbolic',64), 10, enclave_range)
 
     # 2-5. Outside/Inside
     _check_touches_enclave('Case 02', False, 0, 10, enclave_range)
@@ -213,7 +215,7 @@ def test_buffer_entirely_inside_enclave(state):
     global num_issues
     num_issues = 0
     logger.info('Beginning test buffer_entirely_inside_enclave.')
-    sym = state.solver.BVS('symbolic', 64)
+    sym = claripy.BVS('symbolic', 64)
 
     def _check_inside(case_str, expect, test_addr, test_length, test_enclave_range):
         _check(state, buffer_entirely_inside_enclave, _check_entirely_inside, case_str, expect, test_addr, test_length, test_enclave_range)
@@ -294,7 +296,7 @@ def test_buffer_entirely_inside_enclave(state):
     logger.info(f'Testing for enclave range [{enclave_range[0]:#x}, {enclave_range[1]:#x}]')
 
     # 1. Symbolic
-    _check_inside('Case 01', False, state.solver.BVS('symbolic', 64), 10, enclave_range)
+    _check_inside('Case 01', False, claripy.BVS('symbolic', 64), 10, enclave_range)
 
     # 2-5. Outside/Inside
     _check_inside('Case 02', True, 0, 10, enclave_range) # NOW TRUE
@@ -326,7 +328,7 @@ def test_buffer_entirely_inside_enclave(state):
     logger.info(f'Testing for enclave range [{enclave_range[0]:#x}, {enclave_range[1]:#x}]')
 
     # 1. Symbolic
-    _check_inside('Case 01', False, state.solver.BVS('symbolic', 64), 10, enclave_range)
+    _check_inside('Case 01', False, claripy.BVS('symbolic', 64), 10, enclave_range)
 
     # 2-5. Outside/Inside
     _check_inside('Case 02', False, 0, 10, enclave_range)

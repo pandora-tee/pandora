@@ -108,6 +108,14 @@ To install or update, run pip on the requirements script:
 pip3 install -r requirements.txt --upgrade --upgrade-strategy='eager'
 ```
 
+Alternatively, to install and run Pandora in a Python virtual environment:
+
+```bash
+$ sudo python3 -m venv venv
+$ ./venv/bin/pip3 install -r requirements.txt
+$ source ./venv/bin/activate
+(venv) $ ./pandora.py
+```
 
 ## Source code overview
 

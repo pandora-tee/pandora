@@ -182,7 +182,8 @@ def format_regs(state, only_gen_purpose=False, exit=False):
 
     for reg_name in state.project.arch.register_names.values():
         # skip internal angr pseudo registers
-        if reg_name in (state.project.arch.artificial_registers or []) or \
+        artificial_registers = getattr(state.project.arch, 'artificial_registers', [])
+        if reg_name in artificial_registers or \
                 reg_name in x86_arch_regs or \
                 reg_name in x86_privileged_regs:
             continue

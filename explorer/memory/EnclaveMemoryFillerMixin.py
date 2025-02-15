@@ -1,6 +1,7 @@
 import logging
 
-from angr.storage import MemoryMixin
+from angr.storage.memory_mixins.memory_mixin import MemoryMixin
+import claripy
 
 import ui.report
 from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave
@@ -20,7 +21,7 @@ class EnclaveMemoryFillerMixin(MemoryMixin):
      - Measured pages: Are treated as zero
      - Unmeasured pages: Are treated as attacker controlled
     Non-enclave memory:
-     - Treateed as attacker controlled
+     - Treated as attacker controlled
 
     Note that this mixin should only be called on addresses UNKNOWN to the memory backend, so any data
      loaded during Pandora loading should already be returned before this is called. This is just the last
@@ -35,7 +36,7 @@ class EnclaveMemoryFillerMixin(MemoryMixin):
 
         if SDKManager().addr_in_unmeasured_uninitialized_page(addr, size):
             # Address is in an unmeasured enclave page. Return a purely symbolic value
-            mem = get_tainted_mem_bits(self.state, size*8, inspect=inspect, events=events)
+            mem = get_tainted_mem_bits(self.state, size*8)
             logger.log(logging.WARNING if inspect else logging.DEBUG, # If we are not inspecting, this is not an issue
                        f'Buffer {addr:#x} (size {size}) lies within unmeasured memory! Returning tainted memory {str(mem)}.')
 
@@ -62,7 +63,7 @@ class EnclaveMemoryFillerMixin(MemoryMixin):
         if buffer_entirely_inside_enclave(self.state, addr, size):
                 # Address is in a measured page. Then, we actually want to treat this as zero
                 # TODO: Maybe taint as uninitialized?
-                mem = self.state.solver.BVV(0, size * 8)
+                mem = claripy.BVV(0, size * 8)
                 logger.debug(f'Buffer {addr:#x} (size {size}) lies in measured memory. Returning zero buffer {str(mem)}.')
                 return mem
         else:
@@ -74,7 +75,7 @@ class EnclaveMemoryFillerMixin(MemoryMixin):
                 # This should technically never happen: The EnclaveAwareMixin
                 # should interrupt such calls and return a new tainted memory
                 # every time
-                mem = get_tainted_mem_bits(self.state, size*8, inspect=inspect, events=events)
+                mem = get_tainted_mem_bits(self.state, size*8)
                 logger.debug(
                     f'Buffer {addr:#x} (size {size}) lies outside the enclave. Returning tainted memory {str(mem)}.')
 
