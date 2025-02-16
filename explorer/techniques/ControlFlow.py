@@ -1,6 +1,7 @@
 import logging
 
-from angr import ExplorationTechnique, SimState
+from angr import ExplorationTechnique, SimState, BP_BEFORE, BP_AFTER
+import claripy
 
 import ui
 from explorer.enclave import buffer_entirely_inside_enclave
@@ -8,7 +9,7 @@ from explorer.taint import is_tainted
 from ui.action_manager import ActionManager
 from ui.log_format import log_always
 from ui.report import Reporter, SYSTEM_EVENTS_REPORT_NAME
-from utilities.angr_helper import get_reg_value, get_sym_memory_value, memory_is_tainted
+from utilities.angr_helper import get_reg_value, get_sym_memory_value, memory_is_tainted, set_reg_value
 from sdks.SDKManager import SDKManager
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ class ControlFlowTracker(ExplorationTechnique):
         1. terminate execution when jumping to non-exectable enclave regions; and
         2. terminate execution when jumping to memory outside the enclave (without EEXIT).
 
-    NOTE: we can decide condition (2) here without an explicit call to the
+    NOTE: For Intel SGX, we can decide condition (2) here without an explicit call to the
         constraint solver, as regions outside the enclave are not supposed to be
         in the allowlist of executable regions for (1), so the check for (1) here
         implies the check for (2).
@@ -42,6 +43,7 @@ class ControlFlowTracker(ExplorationTechnique):
 
             executable = SDKManager().addr_in_executable_range(ip)
             unmeasured_tainted = SDKManager().addr_in_unmeasured_uninitialized_page(ip, 1) and memory_is_tainted(s, ip, 1)
+            do_eexit = SDKManager().is_eexit_target(ip)
 
             if not executable or unmeasured_tainted:
                 wrong_jumps.append(s)
@@ -77,6 +79,24 @@ class ControlFlowTracker(ExplorationTechnique):
                 # Trigger a user action if requested
                 ActionManager().actions['system'](info='Aborted branch due to illegal jump',
                                                   state=s)
+            elif do_eexit:
+                logger.debug(f"EEXIT for jump target {ip:#x}")
+
+                # Call EEXIT BEFORE breakpoint
+                s._inspect(
+                    "eexit",
+                    BP_BEFORE
+                )
+
+                # Mark state as eexited
+                s.globals['eexit'] = True
+                simgr.move(from_stash='active', to_stash='eexited', filter_func=lambda s: s.globals['eexit'] is True)
+
+                # Lastly, call eexit breakpoint again (AFTER)
+                s._inspect(
+                    "eexit",
+                    BP_AFTER
+                )
 
         if len(wrong_jumps) > 0:
             simgr.move(from_stash='active', to_stash='incorrect', filter_func=lambda x: x in wrong_jumps)

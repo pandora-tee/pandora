@@ -31,6 +31,9 @@ class AbstractSDK:
     def get_encl_size(self):
         raise 'Not implemented'
     
+    def get_entry_addr(self):
+        raise 'Not implemented'
+    
     def get_base_addr(self):
         AbstractSDK.get_load_addr()
 
@@ -68,6 +71,14 @@ class AbstractSDK:
           to speed up exploration.
         """
         pass
+    
+    def is_eexit_target(self, addr):
+        """
+        Optionally check that a jump to a given addr exits the enclave. Some TEEs (eg Sancus) allow to jump
+        explicitly outside the enclave, whereas others (eg SGX) require specific EEXIT instructions to
+        do so and mark all memory as non-executable via get_exec_ranges.
+        """
+        return False
 
     def get_exec_ranges(self):
         """

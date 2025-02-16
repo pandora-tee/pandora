@@ -57,7 +57,7 @@ class AbstractSGXSDK(AbstractSDK):
         logger.debug(f'Rebasing {log_format.format_inline_header(name)} from {addr:#x} to {addr_rebased:#x}')
         return addr_rebased
     
-    def get_oentry_addr(self):
+    def get_entry_addr(self):
         tcs_struct = self.get_tcs_struct(self.init_state)
         return self.rebase_addr(tcs_struct.oentry, 'oentry')
 
@@ -86,7 +86,7 @@ class AbstractSGXSDK(AbstractSDK):
         tcs_addr = self.get_tcs()
         tcs_struct = self.get_tcs_struct(eenter_state)
         
-        set_reg_value(eenter_state, 'rip', self.get_oentry_addr())
+        set_reg_value(eenter_state, 'rip', self.get_entry_addr())
         set_reg_value(eenter_state, 'rbx', tcs_addr)
         set_reg_value(eenter_state, 'rax', tcs_struct.cssa)
         set_reg_value(eenter_state, 'fs', self.rebase_addr(tcs_struct.ofs_base, 'fs_base'))

@@ -6,7 +6,7 @@ from capstone import Cs, CS_ARCH_X86, CS_MODE_64
 
 import ui.log_format
 from explorer.x86 import SimEnclu, Rdrand, SimFxrstor, SimRep, SimVzeroall, SimFxsave, SimMemcpy, SimMemcmp, SimMemset, SimRet, SimAbort, SimLdmxcsr, SimNop
-from explorer.sancus_hooks import SimUnprotect, SimProtect, SimAttest, SimEncrypt, SimDecrypt, SimGetID, SimGetCallerID, SimNop
+from explorer.sancus_hooks import SimUnprotect, SimProtect, SimAttest, SimEncrypt, SimDecrypt, SimGetID, SimGetCallerID, SimNop, SimClix
 from sdks.SymbolManager import SymbolManager
 
 import logging
@@ -32,7 +32,7 @@ class SancusHooker(AbstractHooker):
         '0x1386': SimGetID,
         '0x1387': SimGetCallerID,
         '0x1388': SimNop,
-        '0x1389': SimNop,
+        '0x1389': SimClix,
     }
 
     def hook_mem_region(self, addr, size):

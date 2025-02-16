@@ -141,6 +141,22 @@ if (opcode==16'h1388)
 if (opcode==16'h1389)
     inst_full = "CLIX";
 """
+class SimClix(SimProcedure):
+    IS_FUNCTION = False
+    NEEDS_ENDBR = False
+
+    def run(self, opstr='', bytes_to_skip=2, mnemonic='', **kwargs):
+        logger.debug('hooking CLIX, 0x1389 ---> NOT IMPLEMENTED')
+
+        # nested clix not allowed: results in runtime exception by Sancus hardware
+        # --> used in sancus-support ASSERT/BUG_ON/EXIT macros before infinite loop
+        prev_skipped = self.state.globals['prev_skipped_inst']
+        if prev_skipped and (prev_skipped['opcode'] == 'CLIX' and prev_skipped['addr'] == self.state.addr - bytes_to_skip):
+            logger.warning(f"Aborting path due to nested CLIX @{self.state.addr:#x}")
+            self.state.globals['enclave_fault'] = True
+        else:
+            self.state.globals['prev_skipped_inst'] = {'opcode': 'CLIX', 'addr': self.state.addr, 'len': bytes_to_skip, 'opstr': opstr}
+            self.jump(self.state.addr + bytes_to_skip)
 
 class SimNop(SimProcedure):
     IS_FUNCTION = False

@@ -211,9 +211,9 @@ class SDKManager(metaclass=Singleton):
         else:
             raise 'SDK not initialized yet.'
     
-    def get_oentry_addr(self):
+    def get_entry_addr(self):
         if self.sdk is not None:
-            return self.sdk.get_oentry_addr()
+            return self.sdk.get_entry_addr()
         else:
             raise 'SDK not initialized yet.'
         
@@ -342,6 +342,9 @@ class SDKManager(metaclass=Singleton):
                 return True
 
         return False
+
+    def is_eexit_target(self, addr):
+        return self.sdk.is_eexit_target(addr)
 
     def addr_in_executable_range(self, addr):
         """

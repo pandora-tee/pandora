@@ -57,22 +57,28 @@ class SancusSDK(AbstractSDK):
         return 'msp430'
     
     def get_base_addr(self):
-        #TODO make it return a pair!
+        return self.textStart
+    
+    def get_entry_addr(self):
         return self.textStart
 
     def get_encl_size(self):
-        #TODO
-        #return {'text': self.textSize, 'data': self.dataSize}
         return self.textEnd - self.textStart
     
     def get_enclave_range(self):
         return [(self.textStart, self.textEnd - 1), (self.dataStart, self.dataEnd - 1)]
 
+    def is_eexit_target(self, addr):
+        # Any jumps outside of the Sancus text section result in (implicit) enclave exit
+        return addr < self.textStart or addr > self.textEnd
+
     def get_exec_ranges(self):
-        return [(self.textStart, self.textEnd - self.textStart)]
+        # Sancus enclaves can legally jump out, so mark only the
+        # data section as strictly non-executable
+        return [(0, max(0, self.dataStart - 1)), (min(self.dataEnd + 1, 2**16 - 1), 2**16)]
 
     def init_eenter_state(self, eenter_state):
-        set_reg_value(eenter_state, 'ip', self.textStart)
+        set_reg_value(eenter_state, 'ip', self.get_entry_addr())
 
         #Indicate states where the code writes to its own text section (such that these can be removed to errored stash)
         eenter_state.globals['sancus_text_range'] = (self.textStart, self.textEnd-1)

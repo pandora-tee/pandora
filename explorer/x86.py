@@ -366,7 +366,7 @@ class SimEnclu(SimProcedure):
             self.state.globals['eexit'] = True
             # Do not actively exit this state but just make it jump back to entry.
             # Engine will take care to reset the successor before stepping it.
-            self.successors.add_successor(self.state, SDKManager().get_oentry_addr(),
+            self.successors.add_successor(self.state, SDKManager().get_entry_addr(),
                                           claripy.true(), 'Ijk_Boring')
 
             # Lastly, call eexit breakpoint again (AFTER)
