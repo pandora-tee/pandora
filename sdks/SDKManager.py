@@ -230,6 +230,12 @@ class SDKManager(metaclass=Singleton):
         else:
             raise RuntimeError('SDK not initialized yet.')
 
+    def get_max_inst_size(self):
+        if self.sdk is not None:
+            return self.sdk.get_max_inst_size()
+        else:
+            raise RuntimeError('SDK not initialized yet.')
+
     def get_base_addr(self):
         if self.sdk is not None:
             base_addr = self.sdk.get_base_addr()

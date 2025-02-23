@@ -67,8 +67,8 @@ def check_tainted_jump(state):
     target = state.inspect.exit_target
     # NOTE: as we don't want to bother decoding the length of the target
     # instruction, we safely over-approximate this here to the maximum length
-    # of an x64 instruction (15 bytes)
-    target_len = 15
+    # of an instruction
+    target_len = SDKManager().get_max_inst_size()
     tainted = taint.is_tainted(target)
     symbolic = state.solver.symbolic(target)
     sdk = SDKManager()
@@ -144,11 +144,16 @@ def check_tainted_jump(state):
                 _report_error(state, target, target_len, symbolic, tainted, info, severity)
 
             # Case 2: symbolic tainted target unrestricted inside/outside enclave
-            else:
+            elif buffer_touches_enclave(state, target, target_len):
                 info = f'Symbolic unconstrainted tainted {kind} target'
                 severity = logging.CRITICAL
                 _report_error(state, target, target_len, symbolic, tainted, info, severity)
 
+            # Case 4: allow symbolic target that lies fully in executable memory outside the enclave
+            elif not buffer_entirely_inside_enclave(state, target, target_len, use_enclave_range=SDKManager().get_exec_ranges()):
+                info = f'Symbolic tainted {kind} target in non-executable memory'
+                severity = logging.WARNING
+                _report_error(state, target, target_len, symbolic, tainted, info, severity)
 
 def _report_error(
         state,

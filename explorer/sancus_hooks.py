@@ -1,13 +1,23 @@
 from angr import SimProcedure
+import claripy
+from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave
+from sdks.SDKManager import SDKManager
 import ui
 from utilities.angr_helper import set_reg_value, get_reg_value, get_sym_memory_value, set_memory_value
 import logging
 logger = logging.getLogger(__name__)
 
+SM_ID_UNPROTECTED = 0
+SM_ID_ENCLAVE = 1
+
 # clear ZF to indicate Sancus instruction succeeded
 def clear_zf(s):
     (sr_offset, sr_size) = s.project.arch.registers['r2']
     s.registers.store(sr_offset, s.registers.load(sr_offset,sr_size) & ~(0x1<<1))
+
+def print_info(state, name, opcode, params, desc, criticality=logging.INFO):
+    args = "; ".join(f"r{15 - i}={v}" for i, v in enumerate(reversed(params)))
+    logger.log(criticality, f"hooking {ui.log_format.format_inline_header(name)} (.word {opcode:#x}) @{state.addr:#x} {args} --> {desc}")
 
 """
 if (opcode==16'h1380)
@@ -15,12 +25,13 @@ if (opcode==16'h1380)
 """
 class SimUnprotect(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
+        print_info(self.state, "sancus_disable", 0x1380, [], "aborting execution path")
+
         #TODO: this only makes sure the explorer filters these states from the active stash
         # Would be a good idea to throw a BP here for ABISan
         self.state.globals['protections_disabled'] = True
         clear_zf(self.state)
 
-        logger.warning('hooking sancus_disable, 0x1380 ---> NOT IMPLEMENTED')
         self.jump(self.state.addr + bytes_to_skip)
 
 """
@@ -29,7 +40,8 @@ if (opcode==16'h1381)
 """
 class SimProtect(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
-        logger.warning('hooking sancus_enable, 0x1381 ---> NOT IMPLEMENTED')
+        print_info(self.state, "sancus_enable", 0x1381, [], "SKIPPING (NOT IMPLEMENTED)", criticality=logging.WARNING)
+
         clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
@@ -39,7 +51,8 @@ if (opcode==16'h1382)
 """
 class SimAttest(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
-        logger.warning('hooking verify_address, 0x1382 ---> NOT IMPLEMENTED')
+        print_info(self.state, "sancus_verify", 0x1382, [], "SKIPPING (NOT IMPLEMENTED)", criticality=logging.WARNING)
+        
         clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
@@ -59,7 +72,23 @@ Used for wrapping but also for calculating MAC
 """
 class SimEncrypt(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
-        logger.warning(f'hooking sancus_encrypt at {hex(self.state.addr)}, 0x1384 ---> NOT IMPLEMENTED')
+        key = get_reg_value(self.state, 'r9', False)
+        ad_start = get_reg_value(self.state, 'r10', False)
+        ad_end = get_reg_value(self.state, 'r11', False)
+        plain = get_reg_value(self.state, 'r12', False)
+        plain_end = get_reg_value(self.state, 'r13', False)
+        body = get_reg_value(self.state, 'r14', False)
+        tag = get_reg_value(self.state, 'r15', False)
+        params = [key, ad_start, ad_end, plain, plain_end, body, tag]
+        print_info(self.state, "sancus_encrypt", 0x1384, params, "symbolizing output state")
+
+        to_encrypt_data = get_sym_memory_value(self.state, plain, plain_end, True)
+        ad = get_sym_memory_value(self.state, ad_start, ad_end, True)
+        mac = get_sym_memory_value(self.state, tag, 2, True)
+        #SHOULD DO SOME ENCRYPT WITH KEY HERE
+        set_memory_value(self.state, body, to_encrypt_data, True)
+        set_memory_value(self.state, tag, mac, True)
+        
         clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
@@ -69,8 +98,7 @@ if (opcode==16'h1385)
 https://github.com/sancus-tee/sancus-compiler/blob/dd96baa790ba5bf26c85596568daf9f7818708fd/src/sancus_support/sm_support.h#L587
 """
 class SimDecrypt(SimProcedure):
-    def run(self, opstr='', bytes_to_skip=2, **kwargs):
-        logger.warning(f'hooking sancus_decrypt at {hex(self.state.addr)}, 0x1385 ---> NOT IMPLEMENTED')
+    def run(self, opstr='', bytes_to_skip=2, **kwargs):       
         key = get_reg_value(self.state, 'r9', False)
         ad_start = get_reg_value(self.state, 'r10', False)
         ad_end = get_reg_value(self.state, 'r11', False)
@@ -78,6 +106,8 @@ class SimDecrypt(SimProcedure):
         cipher_end = get_reg_value(self.state, 'r13', False)
         body = get_reg_value(self.state, 'r14', False)
         tag = get_reg_value(self.state, 'r15', False)
+        params = [key, ad_start, ad_end, cipher, cipher_end, body, tag]
+        print_info(self.state, "sancus_decrypt", 0x1385, params, "symbolizing output state")
 
         to_decrypt_data = get_sym_memory_value(self.state, cipher, cipher_end, True)
         ad = get_sym_memory_value(self.state, ad_start, ad_end, True)
@@ -85,7 +115,6 @@ class SimDecrypt(SimProcedure):
         #SHOULD DO SOME DECRYPT WITH KEY HERE
         set_memory_value(self.state, body, to_decrypt_data, True)
 
-        #set_memory_value()
         clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
@@ -96,28 +125,35 @@ https://github.com/sancus-tee/sancus-compiler/blob/dd96baa790ba5bf26c85596568daf
 """
 class SimGetID(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
-        logger.debug('hooking sancus_get_id, 0x1386 ---> NOT IMPLEMENTED')
-        
-        set_reg_value(self.state, 'r15', 0)
+        addr = get_reg_value(self.state, 'r15')
+        print_info(self.state, "sancus_get_id", 0x1386, [addr], "constraining r15 inside/outside enclave")
+
+        rv = claripy.BVS("sancus_get_id_rv", 16, explicit_name=False)
+        if buffer_entirely_inside_enclave(self.state, addr, 15):
+            """
+            Case: addr that fully lies inside the enclave
+            """
+            self.state.add_constraints(rv == SM_ID_ENCLAVE)
+        elif buffer_touches_enclave(self.state, addr, 15):
+            """
+            Case: addr that can lie outside OR inside the enclave
+            """
+            (text_start, text_end) = SDKManager().get_enclave_range()[0]
+            (unprotected_entry, _) = SDKManager().get_exec_ranges()[1]
+            self.state.add_constraints(claripy.Or(
+                claripy.And(rv == SM_ID_ENCLAVE,
+                            claripy.And(addr.UGE(text_start), addr.ULE(text_end))),
+                claripy.And(rv == SM_ID_UNPROTECTED,
+                            addr == unprotected_entry)
+            ))
+        else:
+            """
+            Case: addr fully in untrusted memory
+            """
+            self.state.add_constraints(rv == SM_ID_UNPROTECTED)
+
+        set_reg_value(self.state, 'r15', rv)
         clear_zf(self.state)
-
-        #NOTE
-        #SEE sm_entry.s
-        # https://github.com/sancus-tee/sancus-compiler/blob/dd96baa790ba5bf26c85596568daf9f7818708fd/src/stubs/sm_entry.s#L109-L118
-        #WE SAY THAT THE UNTRUSTED CONTEXT PASSED A VALID RETURN ADDRESS (set r15 to 0 which is the ID of untrusted context), 
-        #BUT OUR SYMBOLIC MODEL DOESNT KNOW THIS YET, SO R7 HAS TO BE CONSTRAINED HERE
-        #SOMETHING LIKE THIS: 
-        #outside_text = claripy.Or(state.regs.r7 < text_min, state.regs.r7 > text_max)
-        #outside_data = claripy.Or(state.regs.r7 < data_min, state.regs.r7 > data_max)
-
-        #BUT this will also be reported as a critical issue see:
-        #CFSAN: Symbolic -> (if buffer_entirely_inside_enclave? else report CRITICAL!)
-        #To avoid these critical issues entirely we set this continuation point 
-        #just hardcoded to the address of the main function
-
-        #inspecting object dumps pointed out that our main function always starts at 0x5c3e, for our tests at least
-        #set_reg_value(self.state, 'r7', 0x5c3e)
-
         self.jump(self.state.addr + bytes_to_skip)
 
 """
@@ -126,10 +162,10 @@ if (opcode==16'h1387)
 """
 class SimGetCallerID(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
-        logger.debug('hooking sancus_get_caller_id, 0x1387 ---> NOT IMPLEMENTED')
-        self.jump(self.state.addr + bytes_to_skip)
-        set_reg_value(self.state, 'r15', 0)
+        print_info(self.state, "sancus_get_caller_id", 0x1387, [], f"returning {SM_ID_UNPROTECTED} (SM_ID_UNPROTECTED)")
 
+        self.jump(self.state.addr + bytes_to_skip)
+        set_reg_value(self.state, 'r15', SM_ID_UNPROTECTED)
 
 
 """
@@ -146,7 +182,7 @@ class SimClix(SimProcedure):
     NEEDS_ENDBR = False
 
     def run(self, opstr='', bytes_to_skip=2, mnemonic='', **kwargs):
-        logger.debug('hooking CLIX, 0x1389 ---> NOT IMPLEMENTED')
+        print_info(self.state, "sancus_clix", 0x1389, [], "skipping (checking for nested clix exceptions)")
 
         # nested clix not allowed: results in runtime exception by Sancus hardware
         # --> used in sancus-support ASSERT/BUG_ON/EXIT macros before infinite loop

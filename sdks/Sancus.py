@@ -17,6 +17,7 @@ class SancusSDK(AbstractSDK):
         self.project = init_state.project
         self.enclave = SancusSDK.get_sancus_enclave(elffile)
 
+        self.unprotected_entry = self.get_symbol_addr('__unprotected_entry')
         self.textStart = self.get_symbol_addr(f'__sm_{self.enclave}_public_start')
         self.textEnd = self.get_symbol_addr(f'__sm_{self.enclave}_public_end')
         self.dataStart = self.get_symbol_addr(f'__sm_{self.enclave}_secret_start')
@@ -65,6 +66,10 @@ class SancusSDK(AbstractSDK):
     def get_encl_size(self):
         return self.textEnd - self.textStart
     
+    def get_max_inst_size(self):
+        # 2-byte opcode + 2*2byte extension words
+        return 6
+    
     def get_enclave_range(self):
         return [(self.textStart, self.textEnd - 1), (self.dataStart, self.dataEnd - 1)]
 
@@ -73,9 +78,10 @@ class SancusSDK(AbstractSDK):
         return addr < self.textStart or addr > self.textEnd
 
     def get_exec_ranges(self):
-        # Sancus enclaves can legally jump out, so mark only the
-        # data section as strictly non-executable
-        return [(0, max(0, self.dataStart - 1)), (min(self.dataEnd + 1, 2**16 - 1), 2**16)]
+        # Sancus enclaves can legally jump out, but compiler-generated enclaves should
+        # normally only jump to the unprotected_entry symbol or the provided continuation
+        # point (which we constrain to unprotected_entry as well)
+        return [(self.textStart, self.textEnd), (self.unprotected_entry, self.unprotected_entry+self.get_max_inst_size())]
 
     def init_eenter_state(self, eenter_state):
         set_reg_value(eenter_state, 'ip', self.get_entry_addr())

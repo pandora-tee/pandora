@@ -56,9 +56,9 @@ class ControlFlowTracker(ExplorationTechnique):
                                            angr_project=s.project) # Pass the project of the state since history doesn't have it
 
                 # Send this as a system event to the reporter to log it properly
-                bvv_at_target = get_sym_memory_value(s, ip, 15, with_enclave_boundaries=True)
+                bvv_at_target = get_sym_memory_value(s, ip, SDKManager().get_max_inst_size(), with_enclave_boundaries=True)
                 extra_sec = None
-                if buffer_entirely_inside_enclave(s, ip, 15):
+                if buffer_entirely_inside_enclave(s, ip, SDKManager().get_max_inst_size()):
                     extra_sec = {'Execution state info': [(
                                  'Disassembly of jump target (not executed)',
                                  ui.log_format.format_asm(s, formatting=None, angr_project=s.project, use_ip=ip),
@@ -71,7 +71,7 @@ class ControlFlowTracker(ExplorationTechnique):
                                   severity= logging.ERROR,
                                   extra_info = {'Jump target' : hex(ip),
                                                 'Jump target is tainted' : is_tainted(bvv_at_target),
-                                                'Jump target (15 bytes)' : str(bvv_at_target),
+                                                f'Jump target ({SDKManager().get_max_inst_size()} bytes)' : str(bvv_at_target),
                                                 'Executable': executable,
                                                 'Unmeasured and tainted': unmeasured_tainted,
                                                 },

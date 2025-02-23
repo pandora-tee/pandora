@@ -31,6 +31,9 @@ class AbstractSDK:
     def get_encl_size(self):
         raise 'Not implemented'
     
+    def get_max_inst_size(self):
+        raise 'Not implemented'
+
     def get_entry_addr(self):
         raise 'Not implemented'
     

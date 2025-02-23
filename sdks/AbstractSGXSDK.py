@@ -57,6 +57,11 @@ class AbstractSGXSDK(AbstractSDK):
         logger.debug(f'Rebasing {log_format.format_inline_header(name)} from {addr:#x} to {addr_rebased:#x}')
         return addr_rebased
     
+    def get_max_inst_size(self):
+        # we safely over-approximate this here to the maximum length
+        # of an x64 instruction (15 bytes)
+        return 15
+
     def get_entry_addr(self):
         tcs_struct = self.get_tcs_struct(self.init_state)
         return self.rebase_addr(tcs_struct.oentry, 'oentry')
