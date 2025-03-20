@@ -1,5 +1,6 @@
 import angr
 
+from sdks.SDKManager import SDKManager
 from sdks.SymbolManager import SymbolManager
 from ui.report import Reporter
 from utilities.angr_helper import get_sym_reg_value, get_reg_value, set_reg_value, get_reg_name, concretize_value_or_fail, \
@@ -17,7 +18,6 @@ ignored_regs = {}
 
 import logging
 logger = logging.getLogger(__name__)
-
 
 class ABISanitizationPlugin(BasePlugin):
     """
@@ -40,12 +40,16 @@ class ABISanitizationPlugin(BasePlugin):
     """
 
     def __init__(self, init_state, reporter, usr_act=UserAction.NONE, shortname=abi_shortname):
+        self.angr_arch = SDKManager().get_angr_arch()
         super().__init__(init_state, reporter, usr_act, shortname)
 
-        # Initialize ignored regs from architectural artificial registers and privileged registers
-        global ignored_regs
-        ignored_regs = x86_arch_regs.union(set(init_state.project.arch.artificial_registers), x86_privileged_regs)
-        logger.debug(f'Will ignore the following architectural registers in the ABI plugin: {ignored_regs}')
+        if self.angr_arch == 'x86_64':
+            # Initialize ignored regs from architectural artificial registers and privileged registers
+            global ignored_regs
+            ignored_regs = x86_arch_regs.union(set(init_state.project.arch.artificial_registers), x86_privileged_regs)
+            logger.debug(f'Will ignore the following architectural registers in the ABI plugin: {ignored_regs}')
+        else:
+            logger.debug(f"Note: abisan support for MSP430 is currently limited to EEXIT register cleansing checking..")
 
     @staticmethod
     def get_help_text():
@@ -53,8 +57,7 @@ class ABISanitizationPlugin(BasePlugin):
 
     @staticmethod
     def supports_arch(angr_arch):
-        #TODO this plugin can probably be refactored to be (more) architecture independent
-        return angr_arch == 'x86_64'
+        return True
 
     def init_globals(self):
         global abi_action, reporter, abi_shortname
@@ -63,18 +66,20 @@ class ABISanitizationPlugin(BasePlugin):
         abi_shortname = self.shortname
 
     def init_angr_breakpoints(self, init_state):
-        # Prepare init_state global for API entry
-        init_state.globals['abi_hit_api_entry'] = False
+        if self.angr_arch == 'x86_64':
+            # Prepare init_state global for API entry
+            init_state.globals['abi_hit_api_entry'] = False
 
-        # Criterion 1: do not read attacker-controlled registers
-        init_state.inspect.b('reg_read', when=angr.BP_AFTER, action=reg_read_hook)
+            # Criterion 1: do not read attacker-controlled registers
+            init_state.inspect.b('reg_read', when=angr.BP_AFTER, action=reg_read_hook)
 
-        # Criterion 2: check that register are sanitized at the end of ABI sanitization phase
-        init_state.inspect.b('call', when=angr.BP_AFTER, action=break_abi_to_api)
+            # Criterion 2: check that register are sanitized at the end of ABI sanitization phase
+            init_state.inspect.b('call', when=angr.BP_AFTER, action=break_abi_to_api)
 
-        # Criterion 3 (and 4): check that stack regs are tainted (and that x86_data_regs do not contain enclave secrets)
-        init_state.inspect.b('eexit', when=angr.BP_AFTER, action=break_abi_eexit)
-
+            # Criterion 3 (and 4): check that stack regs are tainted (and that x86_data_regs do not contain enclave secrets)
+            init_state.inspect.b('eexit', when=angr.BP_AFTER, action=break_abi_eexit)
+        elif self.angr_arch == 'msp430':
+            init_state.inspect.b('eexit', when=angr.BP_AFTER, action=break_abi_eexit_msp430)
 
 def reg_read_hook(state):
     """
@@ -313,3 +318,27 @@ def break_abi_eexit(state):
 
         logger.debug('--- EEXIT investigation complete ---')
         abi_action(info='[abi-eexit]')
+
+def break_abi_eexit_msp430(state):
+    ip = get_reg_value(state, 'ip')
+    logger.debug(f'--- Investigating EEXIT state breakpoint @ {ip:#x} ---')
+    dump_regs(state, logger, log_level=logging.DEBUG)
+
+    # r1 (sp) is cleansed auto by HW so no need to check
+    for reg_name in ['sr', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9', 'r10', 'r11', 'r12', 'r13', 'r14', 'r15']:
+        reg = get_reg_value(state, reg_name)
+        extra = {'reg_name': reg_name, 'reg': reg}
+        if reg_name in ['r12', 'r13', 'r14', 'r15']:
+            extra['extra info'] = f'Issue downgraded to a warning since {reg_name} register is in return value ABI registers. Disclaimer: This is a heuristic only, please double check manually!'
+            lvl = logging.WARNING
+        else:
+            lvl = logging.CRITICAL
+
+        if state.solver.symbolic(reg) or reg != 0:
+            logger.debug(f"Symbolic or non-zero register on EEXIT: '{reg_name}'={reg}")
+            Reporter().report(f'On EEXIT: Unscrubbed {reg_name.upper()} register',
+                                state, logger, abi_shortname, lvl, extra)
+
+    logger.debug('--- EEXIT investigation complete ---')
+    abi_action(info='[abi-eexit]')
+    

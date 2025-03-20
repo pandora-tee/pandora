@@ -44,8 +44,26 @@ class ControlFlowTracker(ExplorationTechnique):
             executable = SDKManager().addr_in_executable_range(ip)
             unmeasured_tainted = SDKManager().addr_in_unmeasured_uninitialized_page(ip, 1) and memory_is_tainted(s, ip, 1)
             do_eexit = SDKManager().is_eexit_target(ip)
+            
+            if do_eexit:
+                logger.debug(f"EEXIT for jump target {ip:#x}")
 
-            if not executable or unmeasured_tainted:
+                # Call EEXIT BEFORE breakpoint
+                s._inspect(
+                    "eexit",
+                    BP_BEFORE
+                )
+
+                # Mark state as eexited
+                s.globals['eexit'] = True
+                simgr.move(from_stash='active', to_stash='eexited', filter_func=lambda s: s.globals['eexit'] is True)
+
+                # Lastly, call eexit breakpoint again (AFTER)
+                s._inspect(
+                    "eexit",
+                    BP_AFTER
+                )
+            elif not executable or unmeasured_tainted:
                 wrong_jumps.append(s)
                 logger.error(f'State {s.history.parent} incorrectly jumped to {ip:#x} which is not an allowed code region. Exiting this state.')
                 bbl_addrs = list(s.history.bbl_addrs)
@@ -79,25 +97,7 @@ class ControlFlowTracker(ExplorationTechnique):
                 # Trigger a user action if requested
                 ActionManager().actions['system'](info='Aborted branch due to illegal jump',
                                                   state=s)
-            elif do_eexit:
-                logger.debug(f"EEXIT for jump target {ip:#x}")
-
-                # Call EEXIT BEFORE breakpoint
-                s._inspect(
-                    "eexit",
-                    BP_BEFORE
-                )
-
-                # Mark state as eexited
-                s.globals['eexit'] = True
-                simgr.move(from_stash='active', to_stash='eexited', filter_func=lambda s: s.globals['eexit'] is True)
-
-                # Lastly, call eexit breakpoint again (AFTER)
-                s._inspect(
-                    "eexit",
-                    BP_AFTER
-                )
-
+            
         if len(wrong_jumps) > 0:
             simgr.move(from_stash='active', to_stash='incorrect', filter_func=lambda x: x in wrong_jumps)
             logger.debug(f'Removed states {wrong_jumps}')

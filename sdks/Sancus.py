@@ -75,13 +75,13 @@ class SancusSDK(AbstractSDK):
 
     def is_eexit_target(self, addr):
         # Any jumps outside of the Sancus text section result in (implicit) enclave exit
-        return addr < self.textStart or addr > self.textEnd
+        return addr < self.textStart or addr >= self.textEnd
 
     def get_exec_ranges(self):
         # Sancus enclaves can legally jump out, but compiler-generated enclaves should
         # normally only jump to the unprotected_entry symbol or the provided continuation
         # point (which we constrain to unprotected_entry as well)
-        return [(self.textStart, self.textEnd), (self.unprotected_entry, self.unprotected_entry+self.get_max_inst_size())]
+        return [(self.textStart, self.textEnd-1), (self.unprotected_entry, self.unprotected_entry+self.get_max_inst_size())]
 
     def init_eenter_state(self, eenter_state):
         set_reg_value(eenter_state, 'ip', self.get_entry_addr())
