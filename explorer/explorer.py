@@ -1,6 +1,7 @@
 import logging
 
 import angr
+import sys
 
 import pandora_options as po
 import ui.log_format as log_format
@@ -86,6 +87,12 @@ class AbstractExplorer(metaclass=Singleton):
                 logger.debug(f'PandoraOptions: Registering {k} (type {type(v)}, value {str(v)}) with initial state.')
 
             logger.info(f'Pandora Options on start:\n{ui.log_format.format_fields(po.PandoraOptions().get_options_dict(), normal_format=True)}')
+
+            # Optionally increase Python's recursion limit for exploring loops with symbolic upper bound
+            stack_depth = po.PandoraOptions().get_option('PANDORA_EXPLORE_STACK_DEPTH')
+            if stack_depth != po.PANDORA_EXPLORE_STACK_DEPTH_DEFAULT:
+                logger.info(f'Setting maximum depth of the Python interpreter stack to {stack_depth}')
+                sys.setrecursionlimit(stack_depth)
 
         return self.initial_state
 
