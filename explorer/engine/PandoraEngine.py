@@ -1,6 +1,12 @@
-from angr.engines import SimEngineFailure, SimEngineSyscall, HooksMixin, TrackActionsMixin, \
-    SimInspectMixin, HeavyResilienceMixin, HeavyVEXMixin
-
+from angr.engines import (
+    HeavyResilienceMixin,
+    HeavyVEXMixin,
+    HooksMixin,
+    SimEngineFailure,
+    SimEngineSyscall,
+    SimInspectMixin,
+    TrackActionsMixin,
+)
 
 
 class PandoraEngine(

@@ -1,10 +1,18 @@
-from angr import SimProcedure
+import logging
+
 import claripy
+from angr import SimProcedure
+
+import ui
 from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave
 from sdks.SDKManager import SDKManager
-import ui
-from utilities.angr_helper import set_reg_value, get_reg_value, get_sym_memory_value, set_memory_value
-import logging
+from utilities.angr_helper import (
+    get_reg_value,
+    get_sym_memory_value,
+    set_memory_value,
+    set_reg_value,
+)
+
 logger = logging.getLogger(__name__)
 
 SM_ID_UNPROTECTED = 0
@@ -52,7 +60,7 @@ if (opcode==16'h1382)
 class SimAttest(SimProcedure):
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
         print_info(self.state, "sancus_verify", 0x1382, [], "SKIPPING (NOT IMPLEMENTED)", criticality=logging.WARNING)
-        
+
         clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
@@ -88,7 +96,7 @@ class SimEncrypt(SimProcedure):
         #SHOULD DO SOME ENCRYPT WITH KEY HERE
         set_memory_value(self.state, body, to_encrypt_data, True)
         set_memory_value(self.state, tag, mac, True)
-        
+
         clear_zf(self.state)
         self.jump(self.state.addr + bytes_to_skip)
 
@@ -98,7 +106,7 @@ if (opcode==16'h1385)
 https://github.com/sancus-tee/sancus-compiler/blob/dd96baa790ba5bf26c85596568daf9f7818708fd/src/sancus_support/sm_support.h#L587
 """
 class SimDecrypt(SimProcedure):
-    def run(self, opstr='', bytes_to_skip=2, **kwargs):       
+    def run(self, opstr='', bytes_to_skip=2, **kwargs):
         key = get_reg_value(self.state, 'r9', False)
         ad_start = get_reg_value(self.state, 'r10', False)
         ad_end = get_reg_value(self.state, 'r11', False)

@@ -5,13 +5,20 @@ from elftools.elf.elffile import ELFFile
 
 import ui.log_format
 import ui.log_format as fmt
-from sdks import IntelSDK, LinuxSelftestEnclave, OpenEnclaveSDK, Scone, EnclaveDump, IPE, Sancus
+from sdks import (
+    IPE,
+    EnclaveDump,
+    IntelSDK,
+    LinuxSelftestEnclave,
+    OpenEnclaveSDK,
+    Sancus,
+    Scone,
+)
 from sdks.AbstractSDK import HasJSONLayout
 from sdks.AbstractSGXSDK import AbstractSGXSDK
 from sdks.SymbolManager import SymbolManager
-from sdks.common import load_struct_from_memory
-from utilities.Singleton import Singleton
 from utilities.helper import file_stream_is_elf_file
+from utilities.Singleton import Singleton
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +63,15 @@ class SDKManager(metaclass=Singleton):
             if self.target_arch not in SDKS.keys():
                 logger.error(ui.log_format.format_error(f'Detected {elf_arch}: Unsupported architecture!'))
                 exit(1)
-            
+
             if self.target_arch == 'msp430':
                 logger.debug('Detecting MSP430 binary; dynamically importing angr-platforms..')
                 try:
-                    from angr_platforms.msp430 import arch_msp430, lift_msp430, simos_msp430
+                    from angr_platforms.msp430 import (
+                        arch_msp430,
+                        lift_msp430,
+                        simos_msp430,
+                    )
                 except ModuleNotFoundError:
                     logger.error(ui.log_format.format_error('Failed to dynamically import MSP430 angr platform support: did you install <https://github.com/angr/angr-platforms>?'))
                     exit(1)
@@ -130,7 +141,7 @@ class SDKManager(metaclass=Singleton):
             else:
                 logger.error(ui.log_format.format_error(f"Unsupported SDK '{requested_sdk}' "
                                                         f"for arch '{self.target_arch}'.")
-                             + f" Aborting...")
+                             + " Aborting...")
                 exit(1)
 
         if requested_sdk == 'dump' and self.additional_args['json_file'] is None:
@@ -171,7 +182,7 @@ class SDKManager(metaclass=Singleton):
             for region_addr, region_size in self.get_measured_page_information():
                 # SGX unmeasured areas have to be a multiple of the page size
                 assert (region_size % 4096 ) == 0
-                logger.debug(f'Detected unmeasured area: {region_addr:#x} ({int(region_size/4096)} pages).' + 
+                logger.debug(f'Detected unmeasured area: {region_addr:#x} ({int(region_size/4096)} pages).' +
                              ' Initial reads from that region will be symbolized.')
 
         # Initialize the SymbolManager that will rely either on the elf file or on the SDK-specific symbol dict
@@ -210,13 +221,13 @@ class SDKManager(metaclass=Singleton):
             return self.sdk.get_secs()
         else:
             raise 'SDK not initialized yet.'
-    
+
     def get_entry_addr(self):
         if self.sdk is not None:
             return self.sdk.get_entry_addr()
         else:
             raise 'SDK not initialized yet.'
-        
+
     def get_sdk_name(self):
         target_sdk = self.__get_sdk_class()
         if target_sdk is not None:
@@ -269,7 +280,7 @@ class SDKManager(metaclass=Singleton):
             return target_sdk.get_load_addr()
         else:
             raise RuntimeError('SDK not initialized yet.')
-        
+
     def init_eenter_state(self, eenter_state):
         if self.sdk is not None:
             return self.sdk.init_eenter_state(eenter_state)
@@ -293,7 +304,7 @@ class SDKManager(metaclass=Singleton):
     @staticmethod
     def get_sdk_arch_names():
         return [sdk for arch, sdks in SDKS.items() for sdk in sdks.keys()]
-    
+
     @staticmethod
     def get_sdk_names():
         """
@@ -344,7 +355,7 @@ class SDKManager(metaclass=Singleton):
                 # addr lies in an unmeasured page. Do a sanity check whether it reaches out of an unmeasured area
                 if addr + size > unmeasured_addr + unmeasured_size:
                     logger.warning(
-                        f'Read from unmeasured area but reaching into next area. I probably handle this incorrectly.')
+                        'Read from unmeasured area but reaching into next area. I probably handle this incorrectly.')
                 return True
 
         return False

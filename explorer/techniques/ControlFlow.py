@@ -1,16 +1,18 @@
 import logging
 
-from angr import ExplorationTechnique, SimState, BP_BEFORE, BP_AFTER
-import claripy
+from angr import BP_AFTER, BP_BEFORE, ExplorationTechnique, SimState
 
 import ui
 from explorer.enclave import buffer_entirely_inside_enclave
 from explorer.taint import is_tainted
-from ui.action_manager import ActionManager
-from ui.log_format import log_always
-from ui.report import Reporter, SYSTEM_EVENTS_REPORT_NAME
-from utilities.angr_helper import get_reg_value, get_sym_memory_value, memory_is_tainted, set_reg_value
 from sdks.SDKManager import SDKManager
+from ui.action_manager import ActionManager
+from ui.report import SYSTEM_EVENTS_REPORT_NAME, Reporter
+from utilities.angr_helper import (
+    get_reg_value,
+    get_sym_memory_value,
+    memory_is_tainted,
+)
 
 logger = logging.getLogger(__name__)
 class ControlFlowTracker(ExplorationTechnique):
@@ -44,7 +46,7 @@ class ControlFlowTracker(ExplorationTechnique):
             executable = SDKManager().addr_in_executable_range(ip)
             unmeasured_tainted = SDKManager().addr_in_unmeasured_uninitialized_page(ip, 1) and memory_is_tainted(s, ip, 1)
             do_eexit = SDKManager().is_eexit_target(ip)
-            
+
             if do_eexit:
                 logger.debug(f"EEXIT for jump target {ip:#x}")
 
@@ -97,7 +99,7 @@ class ControlFlowTracker(ExplorationTechnique):
                 # Trigger a user action if requested
                 ActionManager().actions['system'](info='Aborted branch due to illegal jump',
                                                   state=s)
-            
+
         if len(wrong_jumps) > 0:
             simgr.move(from_stash='active', to_stash='incorrect', filter_func=lambda x: x in wrong_jumps)
             logger.debug(f'Removed states {wrong_jumps}')

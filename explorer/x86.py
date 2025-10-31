@@ -1,21 +1,28 @@
-import sys
-
-import angr
-from angr import SimProcedure, SIM_PROCEDURES, BP_BEFORE, BP_AFTER
 
 import logging
 
-from claripy import BVV
+import angr
 import claripy
+from angr import BP_AFTER, BP_BEFORE, SIM_PROCEDURES, SimProcedure
 
 import ui.log_format
 from explorer.enclave import buffer_entirely_inside_enclave
-from sdks.SDKManager import SDKManager
-from utilities.angr_helper import get_sym_reg_value, get_reg_value, get_memory_value, set_memory_value, \
-    get_int_from_bytes, set_reg_value, get_reg_size, get_sym_memory_value, symbolize_memory_value, get_reg_bit_size, \
-    concretize_value_or_none
 from explorer.taint import is_tainted
-from sdks.common import SgxAttributes, Secs, SgxReport, write_struct_to_memory
+from sdks.common import SgxReport, write_struct_to_memory
+from sdks.SDKManager import SDKManager
+from utilities.angr_helper import (
+    concretize_value_or_none,
+    get_int_from_bytes,
+    get_memory_value,
+    get_reg_bit_size,
+    get_reg_size,
+    get_reg_value,
+    get_sym_memory_value,
+    get_sym_reg_value,
+    set_memory_value,
+    set_reg_value,
+    symbolize_memory_value,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +108,7 @@ class SimLdmxcsr(SimProcedure):
     """
 
     def run(self, opstr='', bytes_to_skip=2, **kwargs):
-        
+
         source_addr = get_opstr_addr(self.state, opstr, bytes_to_skip)
         try:
             mxcsr = get_memory_value(self.state, source_addr, 2, with_enclave_boundaries=True)
@@ -110,7 +117,7 @@ class SimLdmxcsr(SimProcedure):
             mxcsr = get_sym_memory_value(self.state, source_addr, 2, with_enclave_boundaries=True)
             logger.critical(f'LDMXCSR: symbolic MXCSR={mxcsr} not supported; continuing with default MXCSR=0x3f80..')
             mxcsr = 0x3f80
-        
+
         # sse rounding control is in bit 13/14 of the MXCSR starting @ byte 8+16 in xrstor data.
         logger.debug(f'storing Pandora shadow register MXCSR={mxcsr}')
         self.state.globals['pandora_mxcsr'] = mxcsr
@@ -180,7 +187,7 @@ class SimFxrstor(SimProcedure):
                 set_reg_value(self.state, 'fc3210', 0x037F)
                 set_reg_value(self.state, 'fptag', 0xFFFF)
                 set_reg_value(self.state, 'fpround', 0x0)
-                
+
             else:
                 logger.warning('xrstor: partial non-zero xstate_bv not supported; ignoring and restoring supported registers from memory')
 
@@ -290,7 +297,7 @@ class SimFxsave(SimProcedure):
             # lastly, save xsave data at the given memory location
             set_memory_value(self.state, dest_addr, xsave_data, with_enclave_boundaries=True)
 
-            logger.debug(f'Completed (F)XSAVE')
+            logger.debug('Completed (F)XSAVE')
 
         else:
             # Opcode is malformed or unexpected.
@@ -324,7 +331,7 @@ class SimEnclu(SimProcedure):
             secs = SDKManager().get_secs()
             report = SgxReport()
             for k, v in secs._fields_:
-                if not 'reserved' in k and hasattr(report, k):
+                if 'reserved' not in k and hasattr(report, k):
                     v = getattr(secs, k)
                     setattr(report, k, v)
             write_struct_to_memory(self.state, report_dest, report, with_enclave_boundaries=True)
@@ -396,7 +403,7 @@ class SimVzeroall(SimProcedure):
 
         for i in range(0, 16):
             set_reg_value(self.state, f'ymm{i}', claripy.BVV(0, 32))
-        
+
         self.jump(self.state.addr + bytes_to_skip)
 
 class SimAbort(SimProcedure):
@@ -676,7 +683,7 @@ class Rdrand(angr.SimProcedure):
             4: 0xdeadbeef,
             8: 0xdeadbeefcafebabe
         }
-        if not reg_size in hex_vals.keys():
+        if reg_size not in hex_vals.keys():
             raise ValueError(f'rdrand on unknown register size {reg_size} (opcode {opstr})')
         val = claripy.BVV(hex_vals[reg_size], reg_size * 8)
         logger.debug(f"hooking rdrand by setting {opstr} to {val}")

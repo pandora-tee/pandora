@@ -1,5 +1,6 @@
-from sdks.AbstractSDK import AbstractSDK
 import logging
+
+from sdks.AbstractSDK import AbstractSDK
 from utilities.angr_helper import get_sym_reg_value, set_reg_value
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ class openIPESDK(AbstractSDK):
     @staticmethod
     def get_angr_arch():
         return 'msp430'
-    
+
     def get_base_addr(self):
         return self.ipe_start
 
@@ -64,18 +65,18 @@ class openIPESDK(AbstractSDK):
 
     def get_encl_size(self):
         return self.ipe_end - self.ipe_start
-    
+
     def get_enclave_range(self):
         return [(self.ipe_start, self.ipe_end - 1)]
 
     def is_eexit_target(self, addr):
         # Any jumps outside of the IPE section result in (implicit) enclave exit
         return addr < self.ipe_start or addr >= self.ipe_end
-    
+
     def get_max_inst_size(self):
         # 2-byte opcode + 2*2byte extension words
         return 6
-    
+
     def get_exec_ranges(self):
         # IPE enclaves can legally jump out, but compiler-generated enclaves should
         # normally only jump to the unprotected_entry symbol

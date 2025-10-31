@@ -1,20 +1,21 @@
 import logging
+import sys
 
 import angr
-import sys
 
 import pandora_options as po
 import ui.log_format as log_format
 import ui.log_setup
+from explorer.engine.PandoraEngine import PandoraEngine
 from ui.action import UserAction
 from ui.action_manager import ActionManager
-from ui.log_format import get_state_backtrace_formatted, get_state_backtrace_compact
+from ui.log_format import get_state_backtrace_compact, get_state_backtrace_formatted
 from utilities.Singleton import Singleton
-from explorer.engine.PandoraEngine import PandoraEngine
+
 from .breakpoints import PANDORA_EVENT_TYPES, PANDORA_INSPECT_ATTRIBUTES
 from .memory.EnclaveAwareMemory import EnclaveAwareMemory
-from .techniques.EnclaveReentry import EnclaveReentry
 from .techniques.ControlFlow import ControlFlowTracker
+from .techniques.EnclaveReentry import EnclaveReentry
 from .techniques.ExplorationStatistics import ExplorationStatistics
 from .techniques.PandoraDFS import PandoraDFS
 from .techniques.PandoraLoopSeer import PandoraLoopSeer
@@ -61,7 +62,7 @@ class AbstractExplorer(metaclass=Singleton):
         self.proj = angr.Project(binary_path, main_opts=angr_main_opts, engine=PandoraEngine, selfmodifying_code=selfmodifying_code)
         self.initial_state = None
         self.simgr = None
-        logger.debug(f'Angr project created and Explorer initialized.')
+        logger.debug('Angr project created and Explorer initialized.')
 
     def get_init_state(self):
         if not self.initial_state:
@@ -127,7 +128,7 @@ class AbstractExplorer(metaclass=Singleton):
 
     def print_stash_sizes(self):
         if not self.simgr:
-            return f'Stashes empty.'
+            return 'Stashes empty.'
         else:
             stash_state = ', '.join([
                 f'{k} ({len(self.simgr.stashes.get(k))})' for k in filter(lambda k: k != "errored", self.simgr.stashes.keys())

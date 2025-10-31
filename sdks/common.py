@@ -1,12 +1,11 @@
-import binascii
 import ctypes
-
-import claripy
-import ui.log_format
+import logging
 
 import archinfo
+import claripy
 
-import logging
+import ui.log_format
+
 logger = logging.getLogger(__name__)
 
 def create_versioned_struct(versioned_type, version_major, version_minor):
@@ -15,7 +14,7 @@ def create_versioned_struct(versioned_type, version_major, version_minor):
     for (major_from, minor_from, name, ctype) in versioned_type._fields_versioned_:
         # note: in case of revised fields, specify newest revision first
         # -> any older ones with the same  name will not be added
-        if version_major >= major_from and version_minor >= minor_from and not name in added_names:
+        if version_major >= major_from and version_minor >= minor_from and name not in added_names:
             # recursively apply versioning to any contained subtypes
             if hasattr(ctype,'_fields_versioned_'):
                 ctype = create_versioned_struct(ctype, version_major, version_minor)
@@ -159,7 +158,7 @@ class Secs(ctypes.LittleEndianStructure):
         ("misc_select", ctypes.c_uint32),
         # NOTE: some reserved fields have since been used for CET
         ("cet_leg_bitmap_offset", ctypes.c_uint64),
-        ("cet_attributes", ctypes.c_uint8),     
+        ("cet_attributes", ctypes.c_uint8),
         ("reserved1", ctypes.c_uint8 * 15),
         ("attributes", SgxAttributes),
         ("mr_enclave", ctypes.c_uint8 * 32),
@@ -170,12 +169,12 @@ class Secs(ctypes.LittleEndianStructure):
         ("isv_prod_id", ctypes.c_uint16),
         ("isv_svn", ctypes.c_uint16),
         ("config_svn", ctypes.c_uint16),
-        ("reserved3", ctypes.c_uint8 * 3834),    
+        ("reserved3", ctypes.c_uint8 * 3834),
     ]
 
     def __str__(self):
         fields = {n: getattr(self, n) for n, _ in self._fields_
-                  if not 'reserved' in n}
+                  if 'reserved' not in n}
         return ui.log_format.format_fields(fields)
 
 
@@ -223,7 +222,7 @@ class SgxReport(ctypes.LittleEndianStructure):
         ("isv_prod_id", ctypes.c_uint16),
         ("isv_svn", ctypes.c_uint16),
         ("config_svn", ctypes.c_uint16),
-        ("reserved3", ctypes.c_uint8 * 42),  
+        ("reserved3", ctypes.c_uint8 * 42),
         ("isv_family_id", ctypes.c_uint8 * 16),
         ("report_data", ctypes.c_uint8 * 64),
         ("key_id", ctypes.c_uint8 * 32),
@@ -232,7 +231,7 @@ class SgxReport(ctypes.LittleEndianStructure):
 
     def __str__(self):
         fields = {n: getattr(self, n) for n, _ in self._fields_
-                  if not 'reserved' in n}
+                  if 'reserved' not in n}
         return ui.log_format.format_fields(fields)
 
 
@@ -298,5 +297,5 @@ class SgxSsaGpr(ctypes.LittleEndianStructure):
 
     def __str__(self):
         fields = {n: getattr(self, n) for n, _ in self._fields_
-                  if not 'reserved' in n}
+                  if 'reserved' not in n}
         return ui.log_format.format_fields(fields)

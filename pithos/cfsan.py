@@ -1,15 +1,15 @@
+import logging
+
 import angr
 
 from explorer import taint
 from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave
-from sdks.SDKManager import SDKManager
-from ui.report import Reporter
 from pithos.BasePlugin import BasePlugin
+from sdks.SDKManager import SDKManager
 from ui.action import UserAction
-from utilities.angr_helper import get_reg_value, memory_is_tainted
-import logging
-
-from ui.log_format import format_ast, format_asm
+from ui.log_format import format_asm, format_ast
+from ui.report import Reporter
+from utilities.angr_helper import memory_is_tainted
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ def check_tainted_jump(state):
         'Ijk_Ret' : 'ret'
     }
     if state.inspect.exit_jumpkind in jumptypes:
-        kind = jumptypes[state.inspect.exit_jumpkind]  
+        kind = jumptypes[state.inspect.exit_jumpkind]
     else:
         kind = state.inspect.exit_jumpkind
 

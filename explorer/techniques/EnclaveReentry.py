@@ -3,9 +3,7 @@ import logging
 import angr
 from angr import ExplorationTechnique
 
-import ui
 from explorer.enclave import eenter
-from explorer.unique import get_mem_diffs, get_unique_states
 from ui.action import UserAction
 from ui.log_format import log_always
 
@@ -71,7 +69,7 @@ class EnclaveReentry(ExplorationTechnique):
         states_exhausted = len(simgr.active) == 0
         if states_exhausted and self.performed_reentries < self.enclave_reentry_count and len(simgr.stashes['new_uniques']) > 0:
             self.performed_reentries += 1
-            log_always(logger, f'--- Exhausted all my states. Restarting all new unique states...')
+            log_always(logger, '--- Exhausted all my states. Restarting all new unique states...')
 
             for state in simgr.stashes['new_uniques']:
                 eenter(state)

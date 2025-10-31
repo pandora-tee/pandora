@@ -1,4 +1,5 @@
 import logging
+import re
 from functools import singledispatch
 
 from rich.console import Console
@@ -6,14 +7,11 @@ from rich.pretty import Pretty
 from rich.table import Table
 from rich.theme import Theme
 
-import re
-
 from explorer import taint
-from utilities.angr_helper import get_reg_value
 from explorer.x86 import x86_arch_regs, x86_privileged_regs
 from sdks.SymbolManager import SymbolManager
+from utilities.angr_helper import get_reg_value
 
-import logging
 logger = logging.getLogger(__name__)
 
 # workaround to make rich print hex numbers and strings without enclosing
@@ -287,7 +285,7 @@ def format_asm(state, formatting=None, angr_project=None, use_ip=None, highlight
             ip = get_reg_value(state, 'ip')
     else:
         ip = use_ip
-    
+
     current_block = angr_project.factory.block(ip)
     try:
         disasm = angr_project.analyses.Disassembly(ranges=[(current_block.addr, current_block.addr +current_block.size)])
@@ -307,7 +305,7 @@ def format_asm(state, formatting=None, angr_project=None, use_ip=None, highlight
         arch = angr_project.arch.name.lower()
         logger.debug(f"Exception '{e.__class__.__name__}' when disassembling; falling back to {arch}-objdump..")
         pretty_print_str = SymbolManager().get_objdump(ip, ip+current_block.size, arch=arch)
-    
+
     # print('---- BEGIN VEX ----')
     # proj.factory.block(ip).vex.pp()
     # print('---- END VEX ----')

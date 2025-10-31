@@ -1,7 +1,7 @@
 import logging
 
-from angr.storage.memory_mixins.memory_mixin import MemoryMixin
 import claripy
+from angr.storage.memory_mixins.memory_mixin import MemoryMixin
 
 import ui.report
 from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave

@@ -1,4 +1,4 @@
-import sys
+import logging
 from enum import Enum
 from inspect import getmembers, isfunction
 
@@ -6,8 +6,6 @@ import typer
 
 import pandora_options
 from ui.log_format import *
-
-import logging
 
 logger = logging.getLogger(__name__)
 

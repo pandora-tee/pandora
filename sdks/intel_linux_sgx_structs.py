@@ -1,11 +1,12 @@
+import binascii
 import ctypes
 import enum
-import binascii
-from .common import Tcs, SgxAttributes
+import logging
 
 import ui.log_format
 
-import logging
+from .common import SgxAttributes
+
 logger = logging.getLogger(__name__)
 
 ################################################################################

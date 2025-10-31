@@ -1,15 +1,39 @@
 from __future__ import annotations
+
+import logging
 import re
 
 import angr
-from capstone import Cs, CS_ARCH_X86, CS_MODE_64
+from capstone import CS_ARCH_X86, CS_MODE_64, Cs
 
 import ui.log_format
-from explorer.x86 import SimEnclu, Rdrand, SimFxrstor, SimRep, SimVzeroall, SimFxsave, SimMemcpy, SimMemcmp, SimMemset, SimRet, SimAbort, SimLdmxcsr, SimNop
-from explorer.sancus_hooks import SimUnprotect, SimProtect, SimAttest, SimEncrypt, SimDecrypt, SimGetID, SimGetCallerID, SimNop, SimClix
+from explorer.sancus_hooks import (
+    SimAttest,
+    SimClix,
+    SimDecrypt,
+    SimEncrypt,
+    SimGetCallerID,
+    SimGetID,
+    SimNop,
+    SimProtect,
+    SimUnprotect,
+)
+from explorer.x86 import (
+    Rdrand,
+    SimAbort,
+    SimEnclu,
+    SimFxrstor,
+    SimFxsave,
+    SimLdmxcsr,
+    SimMemcmp,
+    SimMemcpy,
+    SimMemset,
+    SimNop,
+    SimRep,
+    SimRet,
+    SimVzeroall,
+)
 from sdks.SymbolManager import SymbolManager
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +47,7 @@ class AbstractHooker:
 
 class SancusHooker(AbstractHooker):
 
-    instruction_hooks = { 
+    instruction_hooks = {
         '0x1380': SimUnprotect,
         '0x1381': SimProtect,
         '0x1382': SimAttest,
@@ -41,7 +65,7 @@ class SancusHooker(AbstractHooker):
         if entry_sym and re.search(r'__sm_(\w+)_entry|__sm_(\w+)_public_start', entry_sym):
             logger.debug(f'Hooking enclave section [{addr:#x},{addr+size:#x}] ({entry_sym})')
             disasm = SymbolManager().get_objdump(addr, addr+size, arch='msp430')
-            
+
             for (addr, opcode) in self.get_sancus_instr_addresses(disasm.splitlines()):
                 if opcode in self.instruction_hooks.keys():
                     sim_proc = self.instruction_hooks[opcode](opstr="", bytes_to_skip=2, mnemonic=opcode)
@@ -107,7 +131,7 @@ class SGXHooker(AbstractHooker):
             logger.debug(ui.log_format.format_fields(f'hooking function <{name}> at {addr:#x}'))
             logger.debug(ui.log_format.format_asm(self.init_state, use_ip=addr))
         return addr
-    
+
     def hook_mem_region(self, addr, size):
         """
         Hooks a whole memory region at once with SimProcedures.
@@ -192,7 +216,7 @@ class HookerManager:
         loop_count = 0
         # Distinguish between ELF and memory dump: sections may be empty
         section_count = len(self.project.loader.main_object.sections)
-        logger.debug(f'Address        \tInstruction\tOpstr               \tSize [Replacement function]')
+        logger.debug('Address        \tInstruction\tOpstr               \tSize [Replacement function]')
         if section_count != 0:
             # Normal elf file, pick executable sections and start hooking
             if live_console:
@@ -206,7 +230,7 @@ class HookerManager:
         else:
             # Not a normal elf file. In this case, utilize the code pages we got
             if not exec_ranges:
-                logger.error(ui.log_format.format_error(f"Can't hook without a memory layout yet!"))
+                logger.error(ui.log_format.format_error("Can't hook without a memory layout yet!"))
                 exit(1)
 
             total_count = len(self.exec_ranges)

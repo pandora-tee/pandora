@@ -1,14 +1,16 @@
+import logging
+
 import angr
 import claripy
 
 from explorer import taint
-from ui.report import Reporter
-from utilities.angr_helper import get_reg_value
 from pithos.BasePlugin import BasePlugin
 from ui.action import UserAction
-import logging
-
-from ui.log_format import dump_attacker_constraints, dump_solver, format_fields, format_ast
+from ui.log_format import (
+    format_ast,
+)
+from ui.report import Reporter
+from utilities.angr_helper import get_reg_value
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ def unconstrained_read_hook(state):
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_read_length
     info = 'Unconstrained read'
-    extra_info = f'Read address may lie inside or outside enclave'
+    extra_info = 'Read address may lie inside or outside enclave'
 
     _report_error(state, addr, tainted, length, info, ptr_in_enclave=True,
                       severity=logging.CRITICAL, extra_info=extra_info)
@@ -97,7 +99,7 @@ def unconstrained_write_hook(state):
     length = state.inspect.mem_write_length
     data = state.inspect.mem_write_expr
     info = 'Unconstrained write'
-    extra_info = f'Write address may lie inside or outside enclave'
+    extra_info = 'Write address may lie inside or outside enclave'
 
     # Length may be None. In that case, take the size from data
     if length is None:
@@ -114,9 +116,9 @@ def trusted_mem_read_hook(state):
     addr = state.inspect.mem_read_address
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_read_length
-    info = f'Attacker tainted read inside enclave'
-    extra_info = f'Issue downgraded to a warning since read is strictly constrained to memory region inside enclave.' \
-                 f' Disclaimer: This is a heuristic only, please double check manually!'
+    info = 'Attacker tainted read inside enclave'
+    extra_info = 'Issue downgraded to a warning since read is strictly constrained to memory region inside enclave.' \
+                 ' Disclaimer: This is a heuristic only, please double check manually!'
 
     if tainted:
         _report_error(state, addr, tainted, length, info, ptr_in_enclave=True, severity=logging.WARNING,
@@ -131,9 +133,9 @@ def trusted_mem_write_hook(state):
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_write_length
     data = state.inspect.mem_write_expr
-    info = f'Attacker tainted write inside enclave'
-    extra_info = f'Issue downgraded to a warning since write is strictly constrained to memory region inside enclave.' \
-                 f' Disclaimer: This is a heuristic only, please double check manually!'
+    info = 'Attacker tainted write inside enclave'
+    extra_info = 'Issue downgraded to a warning since write is strictly constrained to memory region inside enclave.' \
+                 ' Disclaimer: This is a heuristic only, please double check manually!'
 
     # Length may be None. In that case, take the size from data
     if length is None:
@@ -151,7 +153,7 @@ def untrusted_read_hook(state):
     addr = state.inspect.mem_read_address
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_read_length
-    info = f'Non-tainted read outside enclave'
+    info = 'Non-tainted read outside enclave'
 
     if not tainted:
         _report_error(state, addr, tainted, length, info, ptr_in_enclave=False, severity=logging.CRITICAL)
@@ -165,7 +167,7 @@ def untrusted_write_hook(state):
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_write_length
     data = state.inspect.mem_write_expr
-    info = f'Non-tainted write outside enclave'
+    info = 'Non-tainted write outside enclave'
     # Length may be None. In that case, take the size from data
     if length is None:
         length = len(data)

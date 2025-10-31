@@ -1,14 +1,13 @@
 
 import ctypes
-from sdks.common import Secs
-from utilities.angr_helper import get_reg_value, set_memory_value, set_reg_value
-from sdks.intel_linux_sgx_structs import Tcs
-from sdks.common import SgxSsaGpr
-from sdks.AbstractSDK import AbstractSDK
-from explorer import taint
-from sdks.common import load_struct_from_memory
-from ui import log_format
 import logging
+
+from explorer import taint
+from sdks.AbstractSDK import AbstractSDK
+from sdks.common import Secs, SgxSsaGpr, load_struct_from_memory
+from sdks.intel_linux_sgx_structs import Tcs
+from ui import log_format
+from utilities.angr_helper import get_reg_value, set_memory_value, set_reg_value
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class AbstractSGXSDK(AbstractSDK):
         Returns TCS as the address in memory where the TCS is stored.
         """
         return self.tcs
-    
+
     def get_tcs_struct(self, state):
         return load_struct_from_memory(state, self.get_tcs(), Tcs)
 
@@ -40,7 +39,7 @@ class AbstractSGXSDK(AbstractSDK):
         secs = Secs()
         secs.size = self.get_encl_size()
         secs.base = self.get_base_addr()
-        
+
         # Set INIT on; DEBUG off; 64bit on; rest off
         secs.attributes.flags = 0b101
         # Set XFRM according to a sane default (according to test system)
@@ -48,7 +47,7 @@ class AbstractSGXSDK(AbstractSDK):
 
         # Unless SDK subclasses override this, we assume a default SSA framesize of 1 page
         secs.ssa_frame_size = 1
-        
+
         return secs
 
     def rebase_addr(self, addr, name):
@@ -56,7 +55,7 @@ class AbstractSGXSDK(AbstractSDK):
         addr_rebased = base + addr
         logger.debug(f'Rebasing {log_format.format_inline_header(name)} from {addr:#x} to {addr_rebased:#x}')
         return addr_rebased
-    
+
     def get_max_inst_size(self):
         # we safely over-approximate this here to the maximum length
         # of an x64 instruction (15 bytes)
@@ -90,7 +89,7 @@ class AbstractSGXSDK(AbstractSDK):
         # Get tcs_struct and addr from SDK manager
         tcs_addr = self.get_tcs()
         tcs_struct = self.get_tcs_struct(eenter_state)
-        
+
         set_reg_value(eenter_state, 'rip', self.get_entry_addr())
         set_reg_value(eenter_state, 'rbx', tcs_addr)
         set_reg_value(eenter_state, 'rax', tcs_struct.cssa)

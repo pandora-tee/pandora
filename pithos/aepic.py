@@ -1,15 +1,12 @@
+import logging
+
 import angr
 from claripy import BVV
 
-from explorer import taint
 from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave
-from ui.report import Reporter
 from pithos.BasePlugin import BasePlugin
 from ui.action import UserAction
-import ui.log_format
-import logging
-
-from ui.log_format import format_ast
+from ui.report import Reporter
 from utilities.angr_helper import concretize_value_or_fail
 
 logger = logging.getLogger(__name__)
@@ -108,7 +105,7 @@ def check_aepic_read(state):
         Reporter().report(info, state, logger, plugin_shortname, severity, extra)
 
     else:
-        logger.debug(f'Properly aligned read from untrusted memory.')
+        logger.debug('Properly aligned read from untrusted memory.')
 
 
 def check_aepic_write(state):
@@ -185,7 +182,7 @@ def check_aepic_write(state):
                 # block, so we simply check here if it's directly preceding the
                 # current basic block.
                 if opcode == 'verw' and (addr + size) == bb_addr:
-                    prev_okay = True 
+                    prev_okay = True
                     extra['VERW'] = f'preceding {opcode} {opstr} instruction executed at {addr:#x}'
                     if ins_index != 0:
                         warn = f'verw not directly preceding {ins.mnemonic} ' + \

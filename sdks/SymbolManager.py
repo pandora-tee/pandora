@@ -1,14 +1,13 @@
-import logging
 import bisect
+import logging
 import re
+import subprocess
+from functools import lru_cache
+
 from elftools.elf.elffile import ELFFile
 
-from utilities.Singleton import Singleton
 from utilities.helper import file_stream_is_elf_file
-import ui
-import subprocess
-
-from functools import lru_cache
+from utilities.Singleton import Singleton
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +20,13 @@ class SymbolManager(metaclass=Singleton):
         [(addr, name)]
         """
         if init_state is None:
-            logger.error(f'SymbolManager called without init state. Failed setup.')
+            logger.error('SymbolManager called without init state. Failed setup.')
             exit(1)
         self.init_state = init_state
         self.exec_path = exec_path
 
         if sdk_name == 'Enclave memory dump' and elf_file is None:
-            logger.critical(f'Running a dump file without giving the --sdk-elf-file option means that we will not have access to symbols! We suggest to use the --sdk-elf-file option and give an elf file.')
+            logger.critical('Running a dump file without giving the --sdk-elf-file option means that we will not have access to symbols! We suggest to use the --sdk-elf-file option and give an elf file.')
 
         self._create_symbol_table(elf_file, base_addr)
         self.objdump = None
@@ -44,7 +43,7 @@ class SymbolManager(metaclass=Singleton):
     def get_objdump(self, start, end, arch='x86_64'):
         if not self.objdump:
             self._create_objdump(arch)
-        
+
         # Regex to match the address in objdump format
         address_pattern = re.compile(r'^\s*([0-9a-fA-F]+)(?:\s*<[^>]+>)?:')
 
@@ -72,11 +71,11 @@ class SymbolManager(metaclass=Singleton):
 
         symtab = ELFFile(elf_stream).get_section_by_name('.symtab')
 
-        # this is currently a hack: we probably want to specify 
-        # the offset when providing an ELF symbol file via the command 
-        # line; better seems a config or json to have all this together 
-        # instead of individual messy cmd line opts; even better would be 
-        # to specify a symbol (e.g., "enclave_entry") that is specified in 
+        # this is currently a hack: we probably want to specify
+        # the offset when providing an ELF symbol file via the command
+        # line; better seems a config or json to have all this together
+        # instead of individual messy cmd line opts; even better would be
+        # to specify a symbol (e.g., "enclave_entry") that is specified in
         # the TCS entry point so the offset can be auto calculated :)
         self.rebase_offset = base_addr
         sdk_rebases = {

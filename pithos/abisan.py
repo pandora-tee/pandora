@@ -1,22 +1,29 @@
 import angr
 
+from explorer import taint
+from explorer.x86 import x86_arch_regs, x86_data_regs, x86_privileged_regs
+from pithos.BasePlugin import BasePlugin
 from sdks.SDKManager import SDKManager
 from sdks.SymbolManager import SymbolManager
-from ui.report import Reporter
-from utilities.angr_helper import get_sym_reg_value, get_reg_value, set_reg_value, get_reg_name, concretize_value_or_fail, \
-    concretize_value_or_none, get_current_opcode
-from explorer.x86 import x86_data_regs, x86_arch_regs, x86_privileged_regs
-from pithos.BasePlugin import BasePlugin
 from ui.action import UserAction
-
-from explorer import taint
 from ui.log_format import dump_regs, format_fields, format_header
+from ui.report import Reporter
+from utilities.angr_helper import (
+    concretize_value_or_fail,
+    concretize_value_or_none,
+    get_current_opcode,
+    get_reg_name,
+    get_reg_value,
+    get_sym_reg_value,
+    set_reg_value,
+)
 
 abi_action = UserAction.NONE
 abi_shortname = 'abi'
 ignored_regs = {}
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 class ABISanitizationPlugin(BasePlugin):
@@ -49,7 +56,7 @@ class ABISanitizationPlugin(BasePlugin):
             ignored_regs = x86_arch_regs.union(set(init_state.project.arch.artificial_registers), x86_privileged_regs)
             logger.debug(f'Will ignore the following architectural registers in the ABI plugin: {ignored_regs}')
         else:
-            logger.debug(f"Note: abisan support for MSP430 is currently limited to EEXIT register cleansing checking..")
+            logger.debug("Note: abisan support for MSP430 is currently limited to EEXIT register cleansing checking..")
 
     @staticmethod
     def get_help_text():
@@ -198,7 +205,7 @@ def break_abi_to_api(state):
                 # NOTE to protect against Intel's recent MXCSR Configuration
                 # Dependent Timing (MCDT) security advisory, MXCSR always needs
                 # to be _exactly_ the value 0x1FBF
-                try: 
+                try:
                     mxcsr_val = state.solver.eval_one(mxcsr)
                     do_report = mxcsr_val != 0x1FBF
                     mxcsr = hex(mxcsr_val)
@@ -218,7 +225,7 @@ def break_abi_to_api(state):
                         'Intel security advisory': 'https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/best-practices/mxcsr-configuration-dependent-timing.html'
                     }, 'table'),
                     ]}
-    
+
             # now go over all angr-known registers
             for reg_name in state.project.arch.register_names.values():
                 if reg_name in ignored_regs or reg_name in eenter_untrusted_regs:
@@ -227,7 +234,7 @@ def break_abi_to_api(state):
                 reg = get_reg_value(state, reg_name)
                 if taint.is_tainted(reg):
                     extra[reg_name.upper()] = reg
-                
+
                 """
                 NOTE: angr appears to compute RFLAGS lazily. This means that it
                 will keep a lengthy `<BV64 if ... >` symbolic expression when
@@ -341,4 +348,3 @@ def break_abi_eexit_msp430(state):
 
     logger.debug('--- EEXIT investigation complete ---')
     abi_action(info='[abi-eexit]')
-    

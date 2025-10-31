@@ -1,14 +1,13 @@
 import logging
 
 import angr
-from sdks.SDKManager import SDKManager
-from sdks.SymbolManager import SymbolManager
+
+from pithos.BasePlugin import BasePlugin
 from sdks.common import create_versioned_struct, load_struct_from_memory
 from sdks.intel_linux_sgx_structs import GlobalData
-
+from sdks.SymbolManager import SymbolManager
 from ui.report import Reporter
 from utilities.angr_helper import get_memory_value, get_reg_value
-from pithos.BasePlugin import BasePlugin
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class DebugPlugin(BasePlugin):
         #init_state.inspect.b('address_concretization', when=angr.BP_AFTER, action=concretization_hook)
         # init_state.inspect.b('exit', when=angr.BP_BEFORE, action=jmp_hook)
         init_state.inspect.b('eexit', when=angr.BP_BEFORE, action=eexit_hook)
-        logger.debug(f'Debug plugin enabled')
+        logger.debug('Debug plugin enabled')
 
 def _prettify_state(dict, key, default=None):
     if key in dict:
@@ -61,8 +60,8 @@ def eexit_hook(state: angr.sim_state.SimState):
             0x1: 'ENCLAVE_INIT_IN_PROGRESS',
             0x2: 'ENCLAVE_INIT_DONE',
             0x3: 'ENCLAVE_CRASHED',
-        }, enclave_state)    
-        
+        }, enclave_state)
+
         rv = get_reg_value(state, 'rsi')
         rv = _prettify_state( {
             0x0: 'SGX_SUCCESS',

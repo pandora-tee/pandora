@@ -8,10 +8,22 @@ import elftools.elf.sections
 
 import ui
 from sdks.AbstractSGXSDK import AbstractSGXSDK
-
-from sdks.common import write_struct_to_memory, load_struct_from_memory, Tcs, create_versioned_struct
-from sdks.intel_linux_sgx_structs import Metadata, PatchEntry, Layout, DataDirectory, ElrangeConfigEntry, \
-    LayoutGroup, LayoutId, GlobalData
+from sdks.common import (
+    Tcs,
+    create_versioned_struct,
+    load_struct_from_memory,
+    write_struct_to_memory,
+)
+from sdks.intel_linux_sgx_structs import (
+    DataDirectory,
+    ElrangeConfigEntry,
+    GlobalData,
+    Layout,
+    LayoutGroup,
+    LayoutId,
+    Metadata,
+    PatchEntry,
+)
 
 logger = logging.getLogger(__name__)
 

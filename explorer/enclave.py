@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import logging
-from angr import BP_BEFORE, BP_AFTER
-import claripy
-from sdks.SDKManager import SDKManager
-from explorer import taint
-from utilities.angr_helper import set_reg_value, get_reg_size
 from functools import lru_cache
+
+import claripy
+from angr import BP_AFTER, BP_BEFORE
+
+from explorer import taint
+from sdks.SDKManager import SDKManager
+from utilities.angr_helper import get_reg_size, set_reg_value
 
 logger = logging.getLogger(__name__)
 
 # TODO some sanity checks here would help catching sdk bugs: e.g., assert tcs_addr in enclave range(!)
 def eenter(eenter_state):
-    logger.info(f' --- Initializing state and making it ready for eenter.')
+    logger.info(' --- Initializing state and making it ready for eenter.')
 
     # First, call the eenter breakpoint
     eenter_state._inspect(
@@ -31,7 +33,7 @@ def eenter(eenter_state):
 
     # After tainting all registers, fill registers that are overwritten by EENTER
     SDKManager().init_eenter_state(eenter_state)
-    
+
     # Set the eexit global to False
     eenter_state.globals['eexit'] = False
     eenter_state.globals['protections_disabled'] = False
@@ -45,7 +47,7 @@ def eenter(eenter_state):
 
     # Finalize the setup by marking the state global as active
     eenter_state.globals['pandora_active'] = True
-    logger.info(f' --- State initialization completed.')
+    logger.info(' --- State initialization completed.')
 
     # Lastly, call the eenter breakpoint again
     eenter_state._inspect(

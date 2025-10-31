@@ -1,43 +1,59 @@
 #!/usr/bin/env python3
 
 import atexit
+import json
 import logging
 import sys
 from dataclasses import dataclass
 from itertools import count
+
 # import shellingham # for auto completion of typer, usable with typer-cli
 from pathlib import Path
 from typing import List, Optional
 
 import typer
-import json
-
+from rich.live import Live
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    ProgressColumn,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 from rich.text import Text
 
 import explorer.cfg as cfg
+import pandora_options as po
 import ui.report
-from explorer.explorer import BasicBlockExplorer
-from sdks.SDKManager import SDKManager
 from explorer import explorer, hooker
 from explorer.enclave import eenter
+from explorer.explorer import BasicBlockExplorer
 from pithos.PluginManager import PluginManager
-from tests.enclave import test_buffer_entirely_inside_enclave, test_buffer_touches_enclave
+from sdks.SDKManager import SDKManager
+from tests.enclave import (
+    test_buffer_entirely_inside_enclave,
+    test_buffer_touches_enclave,
+)
 from tests.memory import test_default_memory
-from ui import log_setup, log_format
+from ui import console, log_format, log_setup
 from ui.action import UserAction
 from ui.action_manager import ActionManager
-from ui.log_format import log_always, format_rich, format_fields, get_state_backtrace_compact, format_header, format_bad, \
-    format_good, format_table
+from ui.log_format import (
+    format_bad,
+    format_fields,
+    format_good,
+    format_header,
+    format_rich,
+    format_table,
+    get_state_backtrace_compact,
+    log_always,
+)
 from ui.log_setup import LogLevel
-from ui.report_format import report_formats, ReportFormatter
-
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn, BarColumn, TaskProgressColumn, \
-    TimeRemainingColumn, MofNCompleteColumn, ProgressColumn
-from rich.live import Live
-
-from ui import console
-
-import pandora_options as po
+from ui.report_format import ReportFormatter, report_formats
 
 logger = logging.getLogger(__file__)
 
@@ -84,14 +100,14 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         transient=True,
     )
     with Live(console_progress, console=console):
-        task_pandora = console_progress.add_task(description=f'Setting up Pandora engine', total=None)
-        task_sdks = console_progress.add_task(description=f'Parsing SDK from binary', total=None)
-        task_hooker = console_progress.add_task(description=f'Hooking enclave-specific instructions', total=None)
-        task_plugins = console_progress.add_task(description=f'Preparing symbolic execution and plugins', total=None)
+        task_pandora = console_progress.add_task(description='Setting up Pandora engine', total=None)
+        task_sdks = console_progress.add_task(description='Parsing SDK from binary', total=None)
+        task_hooker = console_progress.add_task(description='Hooking enclave-specific instructions', total=None)
+        task_plugins = console_progress.add_task(description='Preparing symbolic execution and plugins', total=None)
 
         if pandora_state['ctx'].with_cfg:
-            task_cfg = console_progress.add_task(description=f'Generating CFG', total=None)
-            task_simplify = console_progress.add_task(description=f'Simplifying CFG to dag of enclave entry tree',
+            task_cfg = console_progress.add_task(description='Generating CFG', total=None)
+            task_simplify = console_progress.add_task(description='Simplifying CFG to dag of enclave entry tree',
                                                       total=None)
 
 
@@ -172,7 +188,7 @@ class StateProgressColumn(ProgressColumn):
     def render(self, task: "Task") -> Text:
         """Show statistics."""
         fields = task.fields['fields'] # Weirdly double packed here
-        if not 'active' in fields:
+        if 'active' not in fields:
             raise RuntimeError()
 
         stats = f"Statistics: [{fields['active']:4d} active] "
@@ -236,7 +252,7 @@ def pandora_explore(pandora_ctx: PandoraContext):
         # This would be annoying to have the spinner there for user actions.
         using_task = False
         if all(ua == UserAction.NONE for ua in action_mgr.actions.values()):
-            task = console_progress.add_task(description=f'Running symbolic execution at step ',
+            task = console_progress.add_task(description='Running symbolic execution at step ',
                                              total=None if pandora_ctx.num_steps == 0 else pandora_ctx.num_steps,
                                              fields={'active': 1, 'eexited':0})
             using_task = True
@@ -311,10 +327,10 @@ def pandora_explore(pandora_ctx: PandoraContext):
             logger.info(f'Errored states callbacks:\nTrace length: {len(bbt)}\n' + log_format.format_fields(bbt))
     else:
         log_always(logger, log_format.format_good(f'\n\nPandora completed after taking {executed_num_steps} steps.'))
-        log_always(logger, log_format.format_good(f'Pandora completed gracefully, no errored states created.'))
+        log_always(logger, log_format.format_good('Pandora completed gracefully, no errored states created.'))
 
     if not is_done:
-        log_always(logger, log_format.format_warning(f'Discontinued execution as requested but still had states to explore.'))
+        log_always(logger, log_format.format_warning('Discontinued execution as requested but still had states to explore.'))
 
     log_always(logger, f'Final stash sizes after step {executed_num_steps}: {my_explorer.print_stash_sizes()}')
 
@@ -377,7 +393,7 @@ def pandora_cfg(pandora_ctx: PandoraContext, binary_path: Path):
         transient=True,
     )
     with Live(console_progress, console=console):
-        task_export = console_progress.add_task(description=f'Exporting CFG to dotfile', total=None)
+        task_export = console_progress.add_task(description='Exporting CFG to dotfile', total=None)
 
         # Generate filename
         path = ui.report.generate_basedir('log_folder', binary_path)
@@ -685,7 +701,7 @@ COMMAND_EXPLORE_HELP = 'Perform an exploration on the given binary.'
 COMMAND_REPORT_HELP = 'Generate a report for a given exploration log file.'
 COMMAND_RUN_HELP = f'Shorthand for {log_format.format_inline_header("explore")} ' \
                    f'+ {log_format.format_inline_header("report")}'
-COMMAND_CFG_HELP = f'EXPERIMENTAL: Create a control flow graph of this binary into the default log folder.'
+COMMAND_CFG_HELP = 'EXPERIMENTAL: Create a control flow graph of this binary into the default log folder.'
 COMMAND_SELFTEST_HELP = 'Performs a normal binary load (as for explore/run) but then performs a series of selftests.'
 app = typer.Typer(add_completion=False, rich_markup_mode="rich", no_args_is_help=True)
 app.command(name='explore', help=COMMAND_EXPLORE_HELP)(main_callback)

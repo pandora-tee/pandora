@@ -1,16 +1,14 @@
 import configparser
 import copy
-from collections import defaultdict
 import enum
+import logging
+from collections import defaultdict
 
-import angr
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.theme import Theme
 
-from . import initial_loggers, console
-
-import logging
+from . import console, initial_loggers
 
 logger = logging.getLogger(__name__)
 # We disable interpolation to allow the format string.

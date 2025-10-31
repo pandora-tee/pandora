@@ -11,8 +11,18 @@ import ui
 from explorer.enclave import get_enclave_range
 from sdks.SymbolManager import SymbolManager
 from ui import log_setup, pandora_root_dir
-from ui.log_format import format_log_level, format_header, log_always, format_table, format_link, format_asm, \
-    format_regs, format_attacker_constraints, get_state_backtrace_formatted, format_inline_header
+from ui.log_format import (
+    format_asm,
+    format_attacker_constraints,
+    format_header,
+    format_inline_header,
+    format_link,
+    format_log_level,
+    format_regs,
+    format_table,
+    get_state_backtrace_formatted,
+    log_always,
+)
 from ui.log_setup import LogLevel
 from utilities.Singleton import Singleton
 

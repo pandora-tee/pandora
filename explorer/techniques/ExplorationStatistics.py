@@ -3,7 +3,7 @@ import logging
 from angr import ExplorationTechnique
 
 from sdks.SymbolManager import SymbolManager
-from ui.report import Reporter, SYSTEM_EVENTS_REPORT_NAME
+from ui.report import SYSTEM_EVENTS_REPORT_NAME, Reporter
 from utilities.angr_helper import get_reg_value
 
 logger = logging.getLogger(__name__)

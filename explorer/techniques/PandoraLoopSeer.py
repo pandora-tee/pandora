@@ -1,14 +1,10 @@
 import logging
 
-from angr import ExplorationTechnique, SimState
+from angr import ExplorationTechnique
 
 import ui
-from explorer.taint import is_tainted
 from sdks.SymbolManager import SymbolManager
-from ui.action_manager import ActionManager
-from ui.log_format import log_always
-from ui.report import Reporter, SYSTEM_EVENTS_REPORT_NAME
-from utilities.angr_helper import get_reg_value, get_sym_memory_value
+from utilities.angr_helper import get_reg_value
 
 logger = logging.getLogger(__name__)
 class PandoraLoopSeer(ExplorationTechnique):

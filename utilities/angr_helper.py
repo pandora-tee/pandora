@@ -2,6 +2,7 @@ import logging
 
 import archinfo
 import claripy
+
 import explorer.taint as taint
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def get_current_opcode(state):
     try:
         ins_index = blck.instruction_addrs.index(scratch_ip)
         ins = blck.disassembly.insns[ins_index]
-        return ins.mnemonic 
+        return ins.mnemonic
     except:
         return ''
 

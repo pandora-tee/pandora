@@ -1,10 +1,11 @@
+import logging
+
 from angr import BP_AFTER, BP_BEFORE
 from angr.storage.memory_mixins.memory_mixin import MemoryMixin
-import logging
-import pandora_options as po
 
-from explorer.enclave import buffer_touches_enclave, buffer_entirely_inside_enclave
-from explorer.taint import is_tainted, get_tainted_mem_bits, add_taint
+import pandora_options as po
+from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave
+from explorer.taint import get_tainted_mem_bits
 
 logger = logging.getLogger(__name__)
 

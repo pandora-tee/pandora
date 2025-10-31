@@ -1,5 +1,4 @@
 import logging
-import ui
 
 from sdks.AbstractSGXSDK import AbstractSGXSDK
 
@@ -47,7 +46,7 @@ class LinuxSelftestEnclave(AbstractSGXSDK):
 
     def get_base_addr(self):
         return LinuxSelftestEnclave.get_load_addr()
-    
+
     @staticmethod
     def get_load_addr():
         return 0x0 #0x5000

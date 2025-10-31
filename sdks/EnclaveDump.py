@@ -1,10 +1,9 @@
 import logging
-import os
 
 import ui
 from sdks.AbstractSDK import HasJSONLayout
 from sdks.AbstractSGXSDK import AbstractSGXSDK
-from sdks.common import load_struct_from_memory, Tcs, Secs, SgxAttributes
+from sdks.common import Secs, SgxAttributes, Tcs, load_struct_from_memory
 from utilities.helper import decode_as_json
 
 logger = logging.getLogger(__name__)
@@ -12,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Keep a global var for the base address since we actually know it before initialization but it depends on the loaded json
 MEMORY_DUMP_BASE_ADDRESS = -1
 class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
-    
+
     def __init__(self, file_name, init_state, version_str, json_file=None, **kwargs):
         """
         Loading an enclave dump is slightly different from the other SDKs.
@@ -62,7 +61,7 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
 
         assert len(secs) == 1
         secs = secs[0]
-        
+
         # Create a zero-initialized SECS and fill it with the JSON captured SECS
         # from the ECREATE system call
         self.secs = Secs()
@@ -108,7 +107,7 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
         assert tcs_mem_struct.oentry == tcs[tcs_index][0]['entry_offset']
         assert tcs_mem_struct.ofs_base == tcs[tcs_index][0]['fs_base']
         assert tcs_mem_struct.ogs_base == tcs[tcs_index][0]['gs_base']
-        logger.debug(f'All good. TCS loaded and verified. Can proceed with enclave dump!')
+        logger.debug('All good. TCS loaded and verified. Can proceed with enclave dump!')
 
 
         # 3. Create a list of all code pages that we have (used by the hooker)
@@ -184,4 +183,4 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
                 break
 
         if MEMORY_DUMP_BASE_ADDRESS == -1:
-            logger.critical(f'Failed to find SECS structure and could not set base address correctly. Expect things to fail!')
+            logger.critical('Failed to find SECS structure and could not set base address correctly. Expect things to fail!')

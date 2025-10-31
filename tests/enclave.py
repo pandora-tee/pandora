@@ -8,8 +8,12 @@ import logging
 import claripy
 
 import ui.log_format
-from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave, _check_entirely_inside, \
-    _check_touches
+from explorer.enclave import (
+    _check_entirely_inside,
+    _check_touches,
+    buffer_entirely_inside_enclave,
+    buffer_touches_enclave,
+)
 
 logger = logging.getLogger(__name__)
 

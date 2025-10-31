@@ -1,10 +1,8 @@
+import logging
 from collections import defaultdict
 
 from pithos.PluginManager import PluginManager
 from ui.action import UserAction
-
-import logging
-
 from utilities.Singleton import Singleton
 
 logger = logging.getLogger(__name__)

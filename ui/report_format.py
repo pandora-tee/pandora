@@ -1,7 +1,7 @@
 import datetime
 import logging
-from collections import defaultdict
 import re
+from collections import defaultdict
 from pathlib import Path
 
 import dominate
@@ -9,9 +9,16 @@ from ansi2html import Ansi2HTMLConverter
 from dominate.tags import *
 
 from ui import pandora_root_dir
-from ui.log_format import format_header, format_inline_header, format_table, format_log_level, format_path, log_always
+from ui.log_format import (
+    format_header,
+    format_inline_header,
+    format_log_level,
+    format_path,
+    format_table,
+    log_always,
+)
 from ui.log_setup import LogLevel
-from ui.report import generate_basedir, generate_filename, JsonEntryId
+from ui.report import JsonEntryId, generate_basedir, generate_filename
 
 logger = logging.getLogger(__name__)
 
@@ -255,7 +262,7 @@ class HTMLFormatter(BaseFormatter):
             ip_secs += li(header, ip_sec, cls='list-group-item')
 
         # create checkboxes to filter based on severity
-        checks = div(cls=f'row p-1 lead')
+        checks = div(cls='row p-1 lead')
         for lvl in self.badge_styles.keys():
             check = input_(checked='', cls='form-check-input', type='checkbox',
                            value='', id=self.make_unique_label('check'),
@@ -425,7 +432,7 @@ class ReportFormatter:
         log_always(logger, 'Successfully saved all reports.')
 
     def add_report_item(self, item):
-        if not 'extra-sections' in item:
+        if 'extra-sections' not in item:
             # Backwards compatibility
             item['extra-sections'] = {}
 

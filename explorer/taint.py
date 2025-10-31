@@ -1,7 +1,8 @@
+import logging
+
 import claripy
 from claripy.annotation import UninitializedAnnotation
 
-import logging
 logger = logging.getLogger(__name__)
 
 """"

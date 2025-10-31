@@ -1,9 +1,11 @@
+import logging
+import re
+
+from angr import BP_AFTER
+
 import explorer
 from sdks.AbstractSDK import AbstractSDK
-from angr import BP_AFTER
-from utilities.angr_helper import set_reg_value, get_reg_value
-import re
-import logging
+from utilities.angr_helper import get_reg_value, set_reg_value
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ class SancusSDK(AbstractSDK):
         logger.info(f'Found Sancus enclave "{self.enclave}":')
         logger.info(f'\ttext range: [{self.textStart:#x},{self.textEnd:#x}[')
         logger.info(f'\tdata range: [{self.dataStart:#x},{self.dataEnd:#x}[')
-    
+
     def get_symbol_addr(self, name):
         s = self.project.loader.find_symbol(name)
         assert(s)
@@ -52,24 +54,24 @@ class SancusSDK(AbstractSDK):
     @staticmethod
     def get_sdk_name():
         return "Sancus"
-    
+
     @staticmethod
     def get_angr_arch():
         return 'msp430'
-    
+
     def get_base_addr(self):
         return self.textStart
-    
+
     def get_entry_addr(self):
         return self.textStart
 
     def get_encl_size(self):
         return self.textEnd - self.textStart
-    
+
     def get_max_inst_size(self):
         # 2-byte opcode + 2*2byte extension words
         return 6
-    
+
     def get_enclave_range(self):
         return [(self.textStart, self.textEnd - 1), (self.dataStart, self.dataEnd - 1)]
 
@@ -89,7 +91,7 @@ class SancusSDK(AbstractSDK):
         #Indicate states where the code writes to its own text section (such that these can be removed to errored stash)
         eenter_state.globals['sancus_text_range'] = (self.textStart, self.textEnd-1)
         eenter_state.inspect.b('trusted_mem_write', when=BP_AFTER, action=check_write_to_text_section)
-    
+
 """
 Function that changes the 'written_to_text_section' variable if there will be written to the 
 text section of the enclave

@@ -2,6 +2,7 @@
 
 import asyncio
 import configparser
+import json
 import logging
 import os
 import signal
@@ -12,12 +13,10 @@ from pathlib import Path
 
 import rich.pretty
 import typer
-import json
 from rich.console import Console
-from rich.live import Live
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn, BarColumn, TaskProgressColumn, \
-    TimeRemainingColumn
-from rich.style import Style
+from rich.progress import (
+    Progress,
+)
 from rich.table import Table
 
 console = Console(color_system=None, highlight=False, soft_wrap=True)
@@ -108,7 +107,7 @@ def check(ctx: CIContext, base_config_path='', ci_config_path=''):
     config_base.read(base_config_path)
 
     # Sanity check that the files are correct
-    if not 'Logging' in config_ci or not 'Logging' in config_base:
+    if 'Logging' not in config_ci or 'Logging' not in config_base:
         raise RuntimeError('Config file error.')
 
     ci_folder = config_ci['Logging']['log_folder']
@@ -263,7 +262,7 @@ def check(ctx: CIContext, base_config_path='', ci_config_path=''):
 
     if len(diff_list) > 0:
         # Print a table of number of diffs per index
-        table = Table(title=f"Difference overview for all files:")
+        table = Table(title="Difference overview for all files:")
         table.add_column("Filename")
         table.add_column("Index")
         table.add_column("Number of differences")
@@ -297,7 +296,7 @@ def fix(ctx: CIContext):
     with open(ctx.filepath, 'r') as file:
         file_string = file.read()
 
-    logger.info(f'Loaded file. Attempting to parse it...')
+    logger.info('Loaded file. Attempting to parse it...')
     file_json = {}
     fixed = False
     try:
@@ -345,7 +344,7 @@ def fix(ctx: CIContext):
             metadata_substring = file_string[start_index: start_index + stop_offset]
             # logger.debug(f'Metadata string seems to be {metadata_substring}')
             file_metadata = json.loads(metadata_substring)
-            logger.info(f'Found file metadata:')
+            logger.info('Found file metadata:')
             rich.pretty.pprint(file_metadata)
             stop_metadata = {"type": file_metadata['type'],
                              "stop_timestamp": file_metadata['start_timestamp']}
@@ -364,7 +363,7 @@ def fix(ctx: CIContext):
             try:
                 json.loads(attempt_fix)
             except json.JSONDecodeError as e:
-                logger.info(f"Sorry, I can't fix this. Error is still:")
+                logger.info("Sorry, I can't fix this. Error is still:")
                 rich.pretty.pprint(e)
                 fixed = False
             else:

@@ -1,5 +1,4 @@
 from ui.action import UserAction
-from ui.report import Reporter
 
 
 class BasePlugin:

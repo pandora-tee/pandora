@@ -1,5 +1,6 @@
 import subprocess
 
+
 class AbstractSDK:
     def __init__(self, elffile, init_state, version_str, **kwargs):
         self.init_state = init_state
@@ -24,19 +25,19 @@ class AbstractSDK:
 
     def init_eenter_state(self, eenter_state):
         raise 'Not implemented'
-    
+
     def get_unmeasured_pages(self):
         return []
-    
+
     def get_encl_size(self):
         raise 'Not implemented'
-    
+
     def get_max_inst_size(self):
         raise 'Not implemented'
 
     def get_entry_addr(self):
         raise 'Not implemented'
-    
+
     def get_base_addr(self):
         AbstractSDK.get_load_addr()
 
@@ -74,7 +75,7 @@ class AbstractSDK:
           to speed up exploration.
         """
         pass
-    
+
     def is_eexit_target(self, addr):
         """
         Optionally check that a jump to a given addr exits the enclave. Some TEEs (eg Sancus) allow to jump

@@ -1,7 +1,7 @@
 import logging
 
 from sdks.AbstractSGXSDK import AbstractSGXSDK
-from sdks.common import write_struct_to_memory, write_bvv_to_memory, Tcs
+from sdks.common import Tcs, write_bvv_to_memory, write_struct_to_memory
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def zero_init_page(init_state, rel_addr):
 class Scone(AbstractSGXSDK):
     def __init__(self, elffile, init_state, version_str, **kwargs):
         super().__init__(elffile, init_state, version_str, **kwargs)
-        logger.debug(f'Initializing basic TCS.')
+        logger.debug('Initializing basic TCS.')
 
         tcs_struct = self.build_tcs()
         write_struct_to_memory(init_state, self.get_tcs(), tcs_struct)
@@ -91,7 +91,7 @@ class Scone(AbstractSGXSDK):
 
     def get_base_addr(self):
         return Scone.get_load_addr()
-    
+
     def modify_init_state(self, init_state):
         # Scone can be sped up if RDX is set to 3 at initialization (the thread that performs the work)
         # hack to limit paths
