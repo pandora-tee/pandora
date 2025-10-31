@@ -1,48 +1,39 @@
-import explorer
-from sdks.SDKManager import SDKManager
-import ui.log_format as log_fmt
-from pithos import abisan, ptrsan, cfsan, debug, aepic
-
-plugins = {
-    'abi'      : abisan.ABISanitizationPlugin,
-    'ptr'      : ptrsan.PointerSanitizationPlugin,
-    'cf'       : cfsan.ControlFlowSanitizationPlugin,
-    'dbg'      : debug.DebugPlugin,
-    'aepic'    : aepic.AepicPlugin
-}
-
 import logging
+
+import explorer
+import ui.log_format as log_fmt
+from pithos import abisan, aepic, cfsan, debug, ptrsan
+from sdks.SDKManager import SDKManager
+
+plugins = {"abi": abisan.ABISanitizationPlugin, "ptr": ptrsan.PointerSanitizationPlugin, "cf": cfsan.ControlFlowSanitizationPlugin, "dbg": debug.DebugPlugin, "aepic": aepic.AepicPlugin}
+
 
 logger = logging.getLogger(__name__)
 
 
 class PluginManager:
-
-    def __init__(self, init_state, requested_plugins : list, plugin_actions, reporter):
-
-        if 'all' in requested_plugins:
-            logger.info(f'Activating {log_fmt.format_warning("all")} plugins...')
+    def __init__(self, init_state, requested_plugins: list, plugin_actions, reporter):
+        if "all" in requested_plugins:
+            logger.info(f"Activating {log_fmt.format_warning('all')} plugins...")
             requested_plugins = plugins.keys()
 
-        if 'default' in requested_plugins:
+        if "default" in requested_plugins:
             requested_plugins = set(requested_plugins)
-            requested_plugins.remove('default')
+            requested_plugins.remove("default")
             for name, plug in plugins.items():
                 if plug.is_default_plugin():
                     requested_plugins.add(name)
-                    
+
         angr_arch = SDKManager().get_angr_arch()
         self.active_plugins = {}
         for p in requested_plugins:
             if not plugins[p].supports_arch(angr_arch):
-                logger.warning(f"\tPlugin {log_fmt.format_inline_header(p)} unsupported "
-                               f"for arch {angr_arch}; skipping..")
+                logger.warning(f"\tPlugin {log_fmt.format_inline_header(p)} unsupported for arch {angr_arch}; skipping..")
                 continue
-            
+
             action = plugin_actions[p]
             self.active_plugins[p] = plugins[p](init_state, reporter, action, shortname=p)
-            logger.info(f"\tActivated plugin {log_fmt.format_inline_header(p)} "
-                         f"with user action {log_fmt.format_inline_header(action.name)}")
+            logger.info(f"\tActivated plugin {log_fmt.format_inline_header(p)} with user action {log_fmt.format_inline_header(action.name)}")
 
         # Lastly, also inform the x86 SimProcedures about the reporter object to use.
         # We have to do this only now since otherwise we have a circular import
@@ -68,7 +59,4 @@ class PluginManager:
 
     @staticmethod
     def get_special_plugins():
-        return {
-            'default' : 'Shorthand for ' + ','.join([n for n,p in plugins.items() if p.is_default_plugin()]),
-            'all' : 'Shorthand for all plugins'
-        }
+        return {"default": "Shorthand for " + ",".join([n for n, p in plugins.items() if p.is_default_plugin()]), "all": "Shorthand for all plugins"}

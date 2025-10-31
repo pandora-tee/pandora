@@ -3,6 +3,8 @@ import logging
 from angr import ExplorationTechnique
 
 logger = logging.getLogger(__name__)
+
+
 class PandoraDFS(ExplorationTechnique):
     """
     Depth-first search. Adapted from the angr DFS
@@ -20,7 +22,6 @@ class PandoraDFS(ExplorationTechnique):
             simgr.stashes[self.deferred_stash] = []
 
     def step(self, simgr, stash="active", **kwargs):
-
         simgr = simgr.step(stash=stash, **kwargs)
 
         if len(simgr.stashes[stash]) > 1:
@@ -28,6 +29,6 @@ class PandoraDFS(ExplorationTechnique):
 
         if len(simgr.stashes[stash]) == 0 and len(simgr.stashes[self.deferred_stash]) != 0:
             # Active ran out of states. Repopulate from deferred stash if it is not empty
-            simgr.stashes[stash].append(simgr.stashes[self.deferred_stash].pop(0)) # Pop first item
+            simgr.stashes[stash].append(simgr.stashes[self.deferred_stash].pop(0))  # Pop first item
 
         return simgr

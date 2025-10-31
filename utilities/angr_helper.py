@@ -1,10 +1,13 @@
 import logging
 
+import angr
 import archinfo
 import claripy
+
 import explorer.taint as taint
 
 logger = logging.getLogger(__name__)
+
 
 def get_current_opcode(state):
     # Get current instruction in this basic block
@@ -20,27 +23,29 @@ def get_current_opcode(state):
     try:
         ins_index = blck.instruction_addrs.index(scratch_ip)
         ins = blck.disassembly.insns[ins_index]
-        return ins.mnemonic 
+        return ins.mnemonic
     except:
-        return ''
+        return ""
+
 
 def pretty_print_state_stack(state, logger=logging.getLogger()):
     proj = state.project
     s = state.callstack
     i = 0
     addr_list = []
-    logger.debug('Address backtrace:')
+    logger.debug("Address backtrace:")
     while i < state.callstack.__len__():
         addr = s.current_function_address
         addr_list.append(addr)
-        logger.debug(f'{hex(addr)}')
+        logger.debug(f"{hex(addr)}")
         s = s.next
         i += 1
 
-    logger.debug('Full backtrace (reversed --> from start to end):')
+    logger.debug("Full backtrace (reversed --> from start to end):")
     for a in addr_list[::-1]:
         if a != 0:
             proj.factory.block(a).pp()
+
 
 def concretize_value_or_fail(state, value):
     """
@@ -56,6 +61,7 @@ def concretize_value_or_fail(state, value):
 
     return concrete_val
 
+
 def concretize_value_or_none(state, value):
     """
     Attempt to return the concrete value of a BV. Return none if more than one solution exists.
@@ -65,37 +71,41 @@ def concretize_value_or_none(state, value):
     """
     try:
         concrete_val = concretize_value_or_fail(state, value)
-    except:
+    except (angr.errors.SimUnsatError, angr.errors.SimValueError):
+        # No solution or multiple solutions found
         concrete_val = None
 
     return concrete_val
 
 
 def get_sym_reg_value(state, reg_name, disable_actions=True, inspect=False):
-    '''
+    """
     Returns the SYMBOLIC value of the register specified by name in
     the current state, taking care to not trigger any reg_read breakpoints.
 
     https://docs.angr.io/core-concepts/simulation#caution-about-mem_read-breakpoint
-    '''
+    """
     (reg_offset, reg_size) = state.project.arch.registers[reg_name]
     return state.registers.load(reg_offset, reg_size, disable_actions=disable_actions, inspect=inspect)
 
+
 def get_reg_value(state, reg_name, disable_actions=True, inspect=False):
-    '''
+    """
     If only one solution possible for this register, returns the CONCRETE
     value. Else returns the SYMBOLIC value of the register specified by name in
     the current state, taking care to not trigger any reg_read breakpoints.
 
     https://docs.angr.io/core-concepts/simulation#caution-about-mem_read-breakpoint
     :return: int | BVV | BVS
-    '''
-    reg_sym = get_sym_reg_value(state,reg_name,disable_actions,inspect)
+    """
+    reg_sym = get_sym_reg_value(state, reg_name, disable_actions, inspect)
     try:
         reg = state.solver.eval_one(reg_sym)
-    except:
+    except (angr.errors.SimUnsatError, angr.errors.SimValueError):
+        # No solution or multiple solutions found
         reg = reg_sym
     return reg
+
 
 def get_sym_memory_value(state, address, size, with_enclave_boundaries=False):
     """
@@ -110,13 +120,12 @@ def get_sym_memory_value(state, address, size, with_enclave_boundaries=False):
     bvs = state.memory.load(address, size, disable_actions=True, inspect=False, with_enclave_boundaries=with_enclave_boundaries)
     return bvs
 
+
 def get_memory_value(state, address, size, with_enclave_boundaries=False):
     """
     Note on endianness: Angr stores BVVs always in Big Endian, no matter what the architecture normally does.
     """
-    bv_bytes = state.solver.eval_one(
-        get_sym_memory_value(state, address, size, with_enclave_boundaries=with_enclave_boundaries),
-        cast_to=bytes)
+    bv_bytes = state.solver.eval_one(get_sym_memory_value(state, address, size, with_enclave_boundaries=with_enclave_boundaries), cast_to=bytes)
     return bv_bytes
 
 
@@ -126,29 +135,32 @@ def set_memory_value(state, address, value, with_enclave_boundaries=False):
     """
     state.memory.store(address, value, endness=archinfo.Endness.BE, with_enclave_boundaries=with_enclave_boundaries)
 
+
 def symbolize_memory_value(state, address, size_bytes, with_enclave_boundaries=False):
     """
     Overwrites the memory at the provided address/size with symbolic values.
 
     Size is in bytes(!)
     """
-    bvs = claripy.BVS('symbolized_memory', size_bytes*8)
+    bvs = claripy.BVS("symbolized_memory", size_bytes * 8)
     state.memory.store(address, bvs, with_enclave_boundaries=with_enclave_boundaries)
+
 
 def memory_is_tainted(state, address, size):
     bvs = state.memory.load(address, size, disable_actions=True, inspect=False)
     rv = taint.is_tainted(bvs)
-    logger.debug(f'Memory at {address} with size={size} --> tainted={rv}')
+    logger.debug(f"Memory at {address} with size={size} --> tainted={rv}")
     return rv
 
+
 def get_int_from_bytes(bytestring, offset, size):
-    return int.from_bytes(bytestring[offset:offset+size], "little") #intel bytes use LE
+    return int.from_bytes(bytestring[offset : offset + size], "little")  # intel bytes use LE
 
 
 def set_reg_value(state, reg_name, value):
-    '''
+    """
     Writes the value to the register without triggering the reg_write breakpoints
-    '''
+    """
     (reg_offset, reg_size) = state.project.arch.registers[reg_name]
     state.registers.store(reg_offset, value)
 
@@ -160,16 +172,18 @@ def get_reg_size(state, reg_name):
     (_, reg_size) = state.project.arch.registers[reg_name]
     return reg_size
 
+
 def get_reg_bit_size(state, reg_name):
     """
     Returns the size of the register in bits
     """
     return get_reg_size(state, reg_name) * 8
 
+
 def get_reg_name(state, reg_offset):
-    '''
+    """
     Returns the register name for a given offset. If this is a subregister, returns the name of the parent register.
-    '''
+    """
     reg_dict = state.project.arch.register_names
     if reg_offset in reg_dict:
         return reg_dict[reg_offset]

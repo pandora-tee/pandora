@@ -31,7 +31,7 @@ def simplify_cfg_to_tree(initial_node, depth_limit=100000):
 
 def export_to_dot(nodes, filepath):
     node_list = list(nodes)
-    dot = 'digraph G {\n'
+    dot = "digraph G {\n"
 
     for i in range(len(node_list)):
         # Display this node either as colored red or with a tooltip showing # of hits
@@ -42,10 +42,10 @@ def export_to_dot(nodes, filepath):
 
         # Loop over successors and add transitions
         for s in node_list[i].successors:
-            if s not in node_list[0:i + 1]:
+            if s not in node_list[0 : i + 1]:
                 dot += f'"{node_list[i].name}" -> "{s.name}";\n'
 
-    dot += '\n}'
+    dot += "\n}"
 
-    with open(filepath, 'w') as f:
+    with open(filepath, "w") as f:
         f.writelines(dot)

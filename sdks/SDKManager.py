@@ -5,34 +5,42 @@ from elftools.elf.elffile import ELFFile
 
 import ui.log_format
 import ui.log_format as fmt
-from sdks import IntelSDK, LinuxSelftestEnclave, OpenEnclaveSDK, Scone, EnclaveDump, IPE, Sancus
+from sdks import (
+    IPE,
+    EnclaveDump,
+    IntelSDK,
+    LinuxSelftestEnclave,
+    OpenEnclaveSDK,
+    Sancus,
+    Scone,
+)
 from sdks.AbstractSDK import HasJSONLayout
 from sdks.AbstractSGXSDK import AbstractSGXSDK
 from sdks.SymbolManager import SymbolManager
-from sdks.common import load_struct_from_memory
-from utilities.Singleton import Singleton
 from utilities.helper import file_stream_is_elf_file
+from utilities.Singleton import Singleton
 
 logger = logging.getLogger(__name__)
 
 SDKS = {
-    'x86_64' : {
-        'intel': IntelSDK.IntelSDK,
-        'linux-selftest': LinuxSelftestEnclave.LinuxSelftestEnclave,
-        'open-enclave': OpenEnclaveSDK.OpenEnclaveSDK,
-        'scone' : Scone.Scone,
+    "x86_64": {
+        "intel": IntelSDK.IntelSDK,
+        "linux-selftest": LinuxSelftestEnclave.LinuxSelftestEnclave,
+        "open-enclave": OpenEnclaveSDK.OpenEnclaveSDK,
+        "scone": Scone.Scone,
     },
-    'msp430' : {
-        'ipe' : IPE.openIPESDK,
-        'sancus' : Sancus.SancusSDK,
-    }
+    "msp430": {
+        "ipe": IPE.openIPESDK,
+        "sancus": Sancus.SancusSDK,
+    },
 }
 ADDITIONAL_LOADING_OPTIONS = {
-    'dump' : EnclaveDump.EnclaveDump,
+    "dump": EnclaveDump.EnclaveDump,
 }
 
+
 class SDKManager(metaclass=Singleton):
-    def __init__(self, executable_path='', requested_sdk='auto', elf_file=None, **kwargs):
+    def __init__(self, executable_path="", requested_sdk="auto", elf_file=None, **kwargs):
         """
         SDKManager takes an elf_path and a requested_sdk to load the given binary as the SDK into angr.
         Default options exist to make the SDKManager callable as a Singleton.
@@ -43,109 +51,101 @@ class SDKManager(metaclass=Singleton):
         self.additional_args = kwargs
         self.elf_symb_file = elf_file
         self.executable_path = executable_path
-        self.target_arch = 'x86_64'
+        self.target_arch = "x86_64"
 
         # Open the path as a stream to check for the elf magic number
-        executable_stream = open(executable_path, 'rb')
+        executable_stream = open(executable_path, "rb")
         if file_stream_is_elf_file(executable_stream):
             # File is elf file. open stream as ELFfile to pass to SDK detectors
             self.executable_object = ELFFile(executable_stream)
 
             # reduce SDK candidates based on machine architecture in ELF file
-            self.target_arch = self.executable_object.header.e_machine.replace('EM_', '').lower()
+            self.target_arch = self.executable_object.header.e_machine.replace("EM_", "").lower()
             if self.target_arch not in SDKS.keys():
-                logger.error(ui.log_format.format_error(f'Detected {elf_arch}: Unsupported architecture!'))
+                logger.error(ui.log_format.format_error(f"Detected {elf_arch}: Unsupported architecture!"))
                 exit(1)
-            
-            if self.target_arch == 'msp430':
-                logger.debug('Detecting MSP430 binary; dynamically importing angr-platforms..')
+
+            if self.target_arch == "msp430":
+                logger.debug("Detecting MSP430 binary; dynamically importing angr-platforms..")
                 try:
-                    from angr_platforms.msp430 import arch_msp430, lift_msp430, simos_msp430
+                    from angr_platforms.msp430 import (
+                        arch_msp430,
+                        lift_msp430,
+                        simos_msp430,
+                    )
                 except ModuleNotFoundError:
-                    logger.error(ui.log_format.format_error('Failed to dynamically import MSP430 angr platform support: did you install <https://github.com/angr/angr-platforms>?'))
+                    logger.error(ui.log_format.format_error("Failed to dynamically import MSP430 angr platform support: did you install <https://github.com/angr/angr-platforms>?"))
                     exit(1)
 
-                if self.additional_args['angr_log_level']:
-                    logging.getLogger('angr_platforms.msp430.instrs_msp430').setLevel(self.additional_args['angr_log_level'].upper())
+                if self.additional_args["angr_log_level"]:
+                    logging.getLogger("angr_platforms.msp430.instrs_msp430").setLevel(self.additional_args["angr_log_level"].upper())
         else:
             # This cannot be an ELF file: magic is missing.
             if requested_sdk in SDKManager.get_sdk_arch_names():
-                logger.error(ui.log_format.format_error(f'Cannot proceed with SDK {requested_sdk}: {executable_path} '
-                                                        f'is not an ELF file!'))
+                logger.error(ui.log_format.format_error(f"Cannot proceed with SDK {requested_sdk}: {executable_path} is not an ELF file!"))
                 exit(1)
 
             # If auto was requested and we are not an elf file, set it to the enclave dump to skip the detection part
-            if requested_sdk == 'auto':
-                requested_sdk = 'dump'
+            if requested_sdk == "auto":
+                requested_sdk = "dump"
                 self.executable_object = executable_path
             else:
                 self.executable_object = executable_stream
 
         # Interject if the name ends on .dump and we are auto detect, then we just assume that it is an enclave dump
-        if requested_sdk == 'auto' and os.path.splitext(executable_path)[1] == '.dump':
-            requested_sdk = 'dump'
+        if requested_sdk == "auto" and os.path.splitext(executable_path)[1] == ".dump":
+            requested_sdk = "dump"
             self.executable_object = executable_path
 
         # Detect the utilized SDK from the binary.
-        if requested_sdk == 'auto':
+        if requested_sdk == "auto":
             logger.debug(f"Starting {self.target_arch.upper()} SDK detection..")
             found = False
             self.possible_sdk = None
-            self.possible_sdk_version = ''
+            self.possible_sdk_version = ""
 
             for name, sdk in SDKS[self.target_arch].items():
                 version = sdk.detect(self.executable_object, executable_path)
-                if version != '':
-                    logger.info('Binary seems to be compiled with the '
-                                f'{fmt.format_header(sdk.get_sdk_name())} '
-                                f'version {fmt.format_header(version)}')
+                if version != "":
+                    logger.info(f"Binary seems to be compiled with the {fmt.format_header(sdk.get_sdk_name())} version {fmt.format_header(version)}")
                     if found:
                         logger.critical("Multiple matches for SDKs detected!")
                     self.possible_sdk = sdk
                     self.possible_sdk_version = version
                     found = True
                 else:
-                    logger.debug(f'Not a {sdk.get_sdk_name()} ELF file.')
+                    logger.debug(f"Not a {sdk.get_sdk_name()} ELF file.")
 
             if self.possible_sdk is None:
-                logger.critical("I could not detect which SDK this is! "
-                                "Is it maybe an enclave memory dump? Then rerun with the "
-                                f"{ui.log_format.format_inline_header('-s dump')} option.")
+                logger.critical(f"I could not detect which SDK this is! Is it maybe an enclave memory dump? Then rerun with the {ui.log_format.format_inline_header('-s dump')} option.")
                 exit(1)
             else:
-                logger.debug('I have found my SDK.')
+                logger.debug("I have found my SDK.")
 
         # Or if specific SDK is requested, default to that
         else:
-
             if requested_sdk in SDKS[self.target_arch].keys():
                 logger.warning(f"Forcing requested SDK {requested_sdk}. Proceed at your own risk!")
                 self.possible_sdk_version = SDKS[self.target_arch][requested_sdk].detect(self.executable_object, executable_path)
                 self.possible_sdk = SDKS[self.target_arch][requested_sdk]
             elif requested_sdk in ADDITIONAL_LOADING_OPTIONS.keys():
-                logger.warning(f'Proceeding with SDK {requested_sdk}')
-                self.possible_sdk_version = \
-                    ADDITIONAL_LOADING_OPTIONS[requested_sdk].detect(self.executable_object, executable_path)
+                logger.warning(f"Proceeding with SDK {requested_sdk}")
+                self.possible_sdk_version = ADDITIONAL_LOADING_OPTIONS[requested_sdk].detect(self.executable_object, executable_path)
                 self.possible_sdk = ADDITIONAL_LOADING_OPTIONS[requested_sdk]
             else:
-                logger.error(ui.log_format.format_error(f"Unsupported SDK '{requested_sdk}' "
-                                                        f"for arch '{self.target_arch}'.")
-                             + f" Aborting...")
+                logger.error(ui.log_format.format_error(f"Unsupported SDK '{requested_sdk}' for arch '{self.target_arch}'.") + " Aborting...")
                 exit(1)
 
-        if requested_sdk == 'dump' and self.additional_args['json_file'] is None:
+        if requested_sdk == "dump" and self.additional_args["json_file"] is None:
             # Try to recover by checking if we can find a .json file of the same name as the .dump file
             file_stem = os.path.splitext(self.executable_path)[0]
-            possible_json_file = file_stem + '.json'
+            possible_json_file = file_stem + ".json"
             if os.path.isfile(possible_json_file):
                 # Apparently there is a json file with that same name at that same location. Attempt to use that.
-                self.additional_args['json_file'] = possible_json_file
-                logger.warning(
-                    f'I did not receive an explicit --sdk-json-file with my dump, but I found {possible_json_file} that I will attempt to use now.')
+                self.additional_args["json_file"] = possible_json_file
+                logger.warning(f"I did not receive an explicit --sdk-json-file with my dump, but I found {possible_json_file} that I will attempt to use now.")
             else:
-                logger.error(f'{ui.log_format.format_error("EnclaveDump SDK requires an additional json file.")} '
-                             f'Give this through '
-                             f'{ui.log_format.format_inline_header("--sdk-json-file")}. Aborting..')
+                logger.error(f"{ui.log_format.format_error('EnclaveDump SDK requires an additional json file.')} Give this through {ui.log_format.format_inline_header('--sdk-json-file')}. Aborting..")
                 exit(1)
 
         # Laslty, keep a list of unmeasured but initialized pages so that they can be combined for the filler mixin
@@ -159,32 +159,30 @@ class SDKManager(metaclass=Singleton):
         Initialize a new instance of the previously detected SDK, give elffile and init state
         """
         self.init_state = init_state
-        logger.debug(f'Initializing SDK as {self.possible_sdk.get_sdk_name()} in version {self.possible_sdk_version}')
+        logger.debug(f"Initializing SDK as {self.possible_sdk.get_sdk_name()} in version {self.possible_sdk_version}")
         self.sdk = self.possible_sdk(self.executable_object, self.init_state, self.possible_sdk_version, **self.additional_args)
 
         if issubclass(self.sdk.__class__, AbstractSGXSDK):
             # for debugging, print tcs
             tcs_struct = self.sdk.get_tcs_struct(init_state)
-            logger.debug(f'TCS at {self.sdk.get_tcs():#x} is:\n{str(tcs_struct)}')
+            logger.debug(f"TCS at {self.sdk.get_tcs():#x} is:\n{str(tcs_struct)}")
 
             # for debugging, print any unmeasured areas
             for region_addr, region_size in self.get_measured_page_information():
                 # SGX unmeasured areas have to be a multiple of the page size
-                assert (region_size % 4096 ) == 0
-                logger.debug(f'Detected unmeasured area: {region_addr:#x} ({int(region_size/4096)} pages).' + 
-                             ' Initial reads from that region will be symbolized.')
+                assert (region_size % 4096) == 0
+                logger.debug(f"Detected unmeasured area: {region_addr:#x} ({int(region_size / 4096)} pages)." + " Initial reads from that region will be symbolized.")
 
         # Initialize the SymbolManager that will rely either on the elf file or on the SDK-specific symbol dict
 
         # If we decided on the dump SDK and elf_file is none, do a double check if maybe
-        if self.requested_sdk == 'dump' and self.elf_symb_file is None:
+        if self.requested_sdk == "dump" and self.elf_symb_file is None:
             file_stem = os.path.splitext(self.executable_path)[0]
-            possible_elf_file = file_stem + '.so'
+            possible_elf_file = file_stem + ".so"
             if os.path.isfile(possible_elf_file):
                 # Apparently there is a json file with that same name at that same location. Attempt to use that.
                 self.elf_symb_file = possible_elf_file
-                logger.warning(
-                    f'I did not receive an explicit --sdk-elf-file with my dump, but I found {self.elf_symb_file} that I will attempt to use now.')
+                logger.warning(f"I did not receive an explicit --sdk-elf-file with my dump, but I found {self.elf_symb_file} that I will attempt to use now.")
 
         SymbolManager(init_state=init_state, elf_file=self.elf_symb_file, exec_path=self.executable_path, base_addr=self.get_base_addr(), sdk_name=self.get_sdk_name())
 
@@ -199,7 +197,6 @@ class SDKManager(metaclass=Singleton):
         """
         Returns either the initialized SDK or the possible sdk base class if one was detected.
         """
-        target = None
         if self.sdk is not None:
             return self.sdk
         else:
@@ -209,32 +206,32 @@ class SDKManager(metaclass=Singleton):
         if self.sdk is not None:
             return self.sdk.get_secs()
         else:
-            raise 'SDK not initialized yet.'
-    
+            raise "SDK not initialized yet."
+
     def get_entry_addr(self):
         if self.sdk is not None:
             return self.sdk.get_entry_addr()
         else:
-            raise 'SDK not initialized yet.'
-        
+            raise "SDK not initialized yet."
+
     def get_sdk_name(self):
         target_sdk = self.__get_sdk_class()
         if target_sdk is not None:
             return self.sdk.get_sdk_name()
         else:
-            raise RuntimeError('SDK not initialized yet.')
+            raise RuntimeError("SDK not initialized yet.")
 
     def get_encl_size(self):
         if self.sdk is not None:
             return self.sdk.get_encl_size()
         else:
-            raise RuntimeError('SDK not initialized yet.')
+            raise RuntimeError("SDK not initialized yet.")
 
     def get_max_inst_size(self):
         if self.sdk is not None:
             return self.sdk.get_max_inst_size()
         else:
-            raise RuntimeError('SDK not initialized yet.')
+            raise RuntimeError("SDK not initialized yet.")
 
     def get_base_addr(self):
         if self.sdk is not None:
@@ -243,8 +240,8 @@ class SDKManager(metaclass=Singleton):
                 if self.init_state is None:
                     # We do not have an init state yet. There may be the option that we have an SDK that
                     #  has a JSON Layout and may want to set the base addr before it exists.
-                    if issubclass(self.sdk, HasJSONLayout) and self.additional_args['json_file'] is not None:
-                        self.sdk.prepare_enclave_offset(self.additional_args['json_file'])
+                    if issubclass(self.sdk, HasJSONLayout) and self.additional_args["json_file"] is not None:
+                        self.sdk.prepare_enclave_offset(self.additional_args["json_file"])
                         # After this, call get_base_addr again
                         base_addr = self.sdk.get_base_addr()
                 else:
@@ -252,13 +249,13 @@ class SDKManager(metaclass=Singleton):
                     return self.init_state.project.loader.main_object.min_addr
             return base_addr
 
-        raise RuntimeError('SDK not initialized yet.')
+        raise RuntimeError("SDK not initialized yet.")
 
     def get_enclave_range(self):
         if self.sdk is not None:
             return self.sdk.get_enclave_range()
         else:
-            raise RuntimeError('SDK not initialized yet.')
+            raise RuntimeError("SDK not initialized yet.")
 
     def get_load_addr(self):
         # MSP430 enclaves span a subpart of a larger static binary of the whole program memory
@@ -268,13 +265,13 @@ class SDKManager(metaclass=Singleton):
         if target_sdk is not None:
             return target_sdk.get_load_addr()
         else:
-            raise RuntimeError('SDK not initialized yet.')
-        
+            raise RuntimeError("SDK not initialized yet.")
+
     def init_eenter_state(self, eenter_state):
         if self.sdk is not None:
             return self.sdk.init_eenter_state(eenter_state)
         else:
-            raise RuntimeError('SDK not initialized yet.')
+            raise RuntimeError("SDK not initialized yet.")
 
     def get_angr_backend(self):
         target_sdk = self.__get_sdk_class()
@@ -293,7 +290,7 @@ class SDKManager(metaclass=Singleton):
     @staticmethod
     def get_sdk_arch_names():
         return [sdk for arch, sdks in SDKS.items() for sdk in sdks.keys()]
-    
+
     @staticmethod
     def get_sdk_names():
         """
@@ -337,14 +334,12 @@ class SDKManager(metaclass=Singleton):
                     if new_size:
                         self.unmeasured_uninitialized_pages.append((unmeasured_addr + unmeasured_size, new_size))
 
-
     def addr_in_unmeasured_uninitialized_page(self, addr, size):
         for unmeasured_addr, unmeasured_size in self.get_unmeasured_uninitialized_pages():
             if unmeasured_addr <= addr < unmeasured_addr + unmeasured_size:
                 # addr lies in an unmeasured page. Do a sanity check whether it reaches out of an unmeasured area
                 if addr + size > unmeasured_addr + unmeasured_size:
-                    logger.warning(
-                        f'Read from unmeasured area but reaching into next area. I probably handle this incorrectly.')
+                    logger.warning("Read from unmeasured area but reaching into next area. I probably handle this incorrectly.")
                 return True
 
         return False
@@ -370,4 +365,3 @@ class SDKManager(metaclass=Singleton):
                 # allow the SDK to have the last word (to support unmeasured
                 # executable page that are added to the ELF file after loading)
                 return self.sdk.override_executable(addr)
-
