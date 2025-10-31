@@ -1,7 +1,7 @@
+from utilities.Singleton import Singleton
+
 # Global variable in Pandora to be able to stop execution from anywhere without needing dependencies
 PANDORA_USER_REQUESTED_EXIT = False
-
-from utilities.Singleton import Singleton
 
 # Options for enclave-aware symbolic execution
 PANDORA_ENCLAVE_MIXIN_ENABLE = "PANDORA_ENCLAVE_MIXIN_ENABLE"

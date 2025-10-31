@@ -27,7 +27,7 @@ class RichHex:
 
 class RichKey:
     def __init__(self, s):
-        if type(s) == str:
+        if isinstance(s, str):
             self.str = s
         else:
             self.str = str(s)
@@ -350,7 +350,7 @@ def format_solver(state, expr):
         res = "unsat"
     else:
         se = state.solver.eval(expr)
-        if type(se) != bool:
+        if not isinstance(se, bool):
             se = "{:#x}".format(se)
         res = f"{se} (unique={state.solver.unique(expr)})"
     return res

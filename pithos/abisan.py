@@ -1,3 +1,5 @@
+import logging
+
 import angr
 
 from explorer import taint
@@ -22,7 +24,6 @@ abi_action = UserAction.NONE
 abi_shortname = "abi"
 ignored_regs = {}
 
-import logging
 
 logger = logging.getLogger(__name__)
 

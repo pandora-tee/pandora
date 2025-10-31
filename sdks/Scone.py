@@ -74,7 +74,7 @@ class Scone(AbstractSGXSDK):
         tcs_struct.ofs_base = 0x4972000
         tcs_struct.ogs_base = 0x4973000
 
-        assert oentry_adrs != None
+        assert oentry_adrs is not None
         tcs_struct.oentry = oentry_adrs
 
         return tcs_struct

@@ -3,8 +3,7 @@ import logging
 
 from explorer import taint
 from sdks.AbstractSDK import AbstractSDK
-from sdks.common import Secs, SgxSsaGpr, load_struct_from_memory
-from sdks.intel_linux_sgx_structs import Tcs
+from sdks.common import Secs, SgxSsaGpr, Tcs, load_struct_from_memory
 from ui import log_format
 from utilities.angr_helper import get_reg_value, set_memory_value, set_reg_value
 

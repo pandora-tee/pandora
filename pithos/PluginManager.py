@@ -1,3 +1,5 @@
+import logging
+
 import explorer
 import ui.log_format as log_fmt
 from pithos import abisan, aepic, cfsan, debug, ptrsan
@@ -5,7 +7,6 @@ from sdks.SDKManager import SDKManager
 
 plugins = {"abi": abisan.ABISanitizationPlugin, "ptr": ptrsan.PointerSanitizationPlugin, "cf": cfsan.ControlFlowSanitizationPlugin, "dbg": debug.DebugPlugin, "aepic": aepic.AepicPlugin}
 
-import logging
 
 logger = logging.getLogger(__name__)
 

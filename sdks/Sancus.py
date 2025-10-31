@@ -49,7 +49,7 @@ class SancusSDK(AbstractSDK):
 
     @staticmethod
     def detect(elffile, binpath):
-        if SancusSDK.get_sancus_enclave(elffile) != None:
+        if SancusSDK.get_sancus_enclave(elffile) is not None:
             return "v1"
         return ""
 

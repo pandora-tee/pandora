@@ -34,7 +34,7 @@ https://docs.angr.io/extending-angr/simprocedures
 """
 x86_arch_regs = {"cmstart", "cmlen", "nraddr", "cs_seg", "ds_seg", "es_seg", "fs_seg", "ss_seg"}
 x86_privileged_regs = {"cr0", "cr2", "cr3", "cr4", "cr8"}
-x86_fpregs = set([f"ymm{i}" for i in range(16)]).union({"sseround", "fpreg", "fptag", "fpround", "fc3210"})
+x86_fpregs = {f"ymm{i}" for i in range(16)}.union({"sseround", "fpreg", "fptag", "fpround", "fc3210"})
 x86_data_regs = {"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "ymm0", "ymm1", "ymm2", "ymm3", "ymm4", "ymm5", "ymm6", "ymm7", "ymm8", "ymm9", "ymm10", "ymm11", "ymm12", "ymm13", "ymm14", "ymm15", "fpreg"}
 x86_data_non_fp_regs = x86_data_regs - x86_fpregs
 

@@ -178,7 +178,7 @@ class Reporter(metaclass=Singleton):
 
         for shortname, plug in self.plugins.items():
             # Map the dict as a length of each value
-            lvl_summaries = defaultdict(int, dict(map(lambda x: (x[0], len(x[1])), plug["ip"].items())))
+            lvl_summaries = defaultdict(int, {x[0]: len(x[1]) for x in plug["ip"].items()})
 
             # And get a tuple from that in the order (critical, warning, debug)
             lvl_tuple = (lvl_summaries[logging.getLevelName(logging.CRITICAL)], lvl_summaries[logging.getLevelName(logging.WARNING)], lvl_summaries[logging.getLevelName(logging.DEBUG)])

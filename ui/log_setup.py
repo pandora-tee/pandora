@@ -139,7 +139,7 @@ def init_logger(config_file, pandora_level, angr_level):
 
     # set all existing (i.e., angr, non-pandora) loggers to requested level
     angr_log_level = angr_level.upper()
-    for l in initial_loggers:
-        logging.getLogger(l).setLevel(angr_log_level)
+    for log in initial_loggers:
+        logging.getLogger(log).setLevel(angr_log_level)
 
     logger.info(f"Logger successfully set up. Pandora level is {logging.getLevelName(logger.getEffectiveLevel())}; Angr level is {angr_log_level}, {len(initial_loggers)} loggers)")

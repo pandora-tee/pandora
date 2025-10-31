@@ -41,22 +41,22 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
         tcs = []
         tcs_pages = []
         pages = []
-        for l in self.enclave_layout:
-            entry_type = l["entry_type"]
+        for layout in self.enclave_layout:
+            entry_type = layout["entry_type"]
             if entry_type == 0:
-                secs.append(l)
+                secs.append(layout)
             elif entry_type == 1:
-                tcs.append(l)
+                tcs.append(layout)
             elif entry_type == 2:
                 # For pages, we check what page it is. Type PT_TCS or PT_SECS get appended to their page list respectively
-                page_type = l["type"]
+                page_type = layout["type"]
                 if page_type == "PT_SECS":
-                    secs_pages.append(l)
+                    secs_pages.append(layout)
                 elif page_type == "PT_TCS":
-                    tcs_pages.append(l)
+                    tcs_pages.append(layout)
                 else:
                     # All other pages we just put into the page list
-                    pages.append(l)
+                    pages.append(layout)
 
         assert len(secs) == 1
         secs = secs[0]

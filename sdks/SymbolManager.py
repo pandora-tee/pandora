@@ -96,7 +96,7 @@ class SymbolManager(metaclass=Singleton):
         self.symbol_table.sort(key=lambda t: t[0])
 
         # convert tuple (addr,name) to map(addr:name)
-        self.symbol_table = {k: v for (k, v) in self.symbol_table}
+        self.symbol_table = dict(self.symbol_table)
 
         # Keep a list of the symbol table to not convert it on every call
         self.symbol_table_list = list(self.symbol_table)

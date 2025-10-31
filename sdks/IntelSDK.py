@@ -127,12 +127,12 @@ class IntelSDK(AbstractSGXSDK):
 
         # For now, we do not support multiple SSAs or threads. This makes it easier to implement the layout as
         #   can ignore the gorups for now. Thus, assert here that we have no groups in the layout
-        layout_groups = [l for l in self.layouts if type(l) is LayoutGroup]
+        layout_groups = [layout for layout in self.layouts if type(layout) is LayoutGroup]
         assert len(layout_groups) == 0, "Intel SDK plugin only supports a single thread per enclave as of now."
 
         # For now, we do not support multiple SSAs or threads. This makes it easier to implement the layout as
         #   can ignore the gorups for now. Thus, assert here that we have no groups in the layout
-        dynamic_layouts = [l for l in self.layouts if l.entry.id > LayoutId.LAYOUT_ID_GUARD.value]
+        dynamic_layouts = [layout for layout in self.layouts if layout.entry.id > LayoutId.LAYOUT_ID_GUARD.value]
         assert len(dynamic_layouts) == 0, "Intel SDK plugin only supports static layouts as of now, no dynamic layouts."
 
         # Prepare address of tcs, will be filled by setup.
@@ -167,44 +167,44 @@ class IntelSDK(AbstractSGXSDK):
         empty_page = claripy.BVV(b"\00" * PAGE_SIZE)
         # Loop over layouts and apply those that are relevant
         # NOTE: As asserted above, all layouts are assumed to be entries and no groups are supported.
-        for l in self.layouts:
+        for layout in self.layouts:
             # We ignore guard pages for now.
-            if l.entry.id == LayoutId.LAYOUT_ID_GUARD.value:
+            if layout.entry.id == LayoutId.LAYOUT_ID_GUARD.value:
                 logger.debug("Skipping guard page.")
                 continue
 
             # Layout is based on content_offset. If it is 0, the whole page is set to the value defined by content_size
             # I.e., everything except for tcs is not copied from memory but set to a fixed value
             # (usually 0 and 0xcc for stack)
-            if l.entry.content_offset == 0:
+            if layout.entry.content_offset == 0:
                 # Just overwrite this memory based on static content_size value
                 content_page = empty_page
-                if l.entry.content_size != 0:
+                if layout.entry.content_size != 0:
                     # We have content to write into the page and can't use the empty page.
                     # Create a new BVV page for this
                     content_amount = int(PAGE_SIZE / 4)  # content_size is uint32 = 4 byte
-                    content_size_bytes = l.entry.content_size.to_bytes(4, "little")
+                    content_size_bytes = layout.entry.content_size.to_bytes(4, "little")
                     content_page = claripy.BVV(content_size_bytes * content_amount)
 
                 # We just want to add the page. Do this as often as page_count demands
-                logger.debug(f"Fixing layout {l.entry.get_name()}: Adding {l.entry.page_count} pages at {hex(l.entry.rva)} (rebased={hex(l.entry.rva + enclave_file_base)}) with content {hex(l.entry.content_size)}")
-                for i in range(0, l.entry.page_count):
-                    init_state.memory.store(enclave_file_base + l.entry.rva + (i * PAGE_SIZE), content_page, endness=archinfo.Endness.LE, with_enclave_boundaries=False)
+                logger.debug(f"Fixing layout {layout.entry.get_name()}: Adding {layout.entry.page_count} pages at {hex(layout.entry.rva)} (rebased={hex(layout.entry.rva + enclave_file_base)}) with content {hex(layout.entry.content_size)}")
+                for i in range(0, layout.entry.page_count):
+                    init_state.memory.store(enclave_file_base + layout.entry.rva + (i * PAGE_SIZE), content_page, endness=archinfo.Endness.LE, with_enclave_boundaries=False)
             # Alternatively, content_offset could have a value. Then we copy from metadata to the destination.
             else:
-                assert l.entry.page_count == 1, "Copying memory for layout but more than one page requested? Unknown feature. Aborting."
-                metadata_offset = self.metadata.metadata_offset_to_data_offset(l.entry.content_offset)
-                mem_slice = claripy.BVV(bytes(bytearray(self.metadata.data[metadata_offset : metadata_offset + l.entry.content_size])))
-                init_state.memory.store(enclave_file_base + l.entry.rva, mem_slice, with_enclave_boundaries=False)
-                logger.debug(f"Fixing layout {l.entry.get_name()}: Copying {hex(l.entry.content_size)} bytes to {hex(l.entry.rva)} (rebased={hex(l.entry.rva + enclave_file_base)}).")
+                assert layout.entry.page_count == 1, "Copying memory for layout but more than one page requested? Unknown feature. Aborting."
+                metadata_offset = self.metadata.metadata_offset_to_data_offset(layout.entry.content_offset)
+                mem_slice = claripy.BVV(bytes(bytearray(self.metadata.data[metadata_offset : metadata_offset + layout.entry.content_size])))
+                init_state.memory.store(enclave_file_base + layout.entry.rva, mem_slice, with_enclave_boundaries=False)
+                logger.debug(f"Fixing layout {layout.entry.get_name()}: Copying {hex(layout.entry.content_size)} bytes to {hex(layout.entry.rva)} (rebased={hex(layout.entry.rva + enclave_file_base)}).")
 
                 # logger.debug(f'Copied bytes source: {mem_slice}')
                 # logger.debug(f'Copied bytes dest @{hex(enclave_file_base + l.entry.rva)} after: '
                 #                   f'{init_state.memory.load(enclave_file_base + l.entry.rva, ctypes.sizeof(Tcs))}')
 
             # If this layout is the TCS, remember its address
-            if l.entry.id == LayoutId.LAYOUT_ID_TCS.value:
-                tcs = l.entry.rva + enclave_file_base
+            if layout.entry.id == LayoutId.LAYOUT_ID_TCS.value:
+                tcs = layout.entry.rva + enclave_file_base
                 logger.debug(f"Found TCS @{hex(tcs)}")
 
                 # Intel SDK sgx_sign tool produces a patch for TCS
@@ -216,9 +216,9 @@ class IntelSDK(AbstractSGXSDK):
                 # See https://github.com/intel/linux-sgx/blob/26c458905b72e66db7ac1feae04b43461ce1b76f/psw/urts/loader.cpp#L403
                 tcs_struct = load_struct_from_memory(init_state, tcs, Tcs)
                 logger.debug("Relocating TCS ossa/ofs_base/ogs_base fields relative to enclave base.")
-                tcs_struct.ossa += l.entry.rva
-                tcs_struct.ofs_base += l.entry.rva
-                tcs_struct.ogs_base += l.entry.rva
+                tcs_struct.ossa += layout.entry.rva
+                tcs_struct.ofs_base += layout.entry.rva
+                tcs_struct.ogs_base += layout.entry.rva
                 write_struct_to_memory(init_state, tcs, tcs_struct)
 
         assert tcs != 0, "TCS could not be read from layouts. Aborting!"
@@ -242,7 +242,7 @@ class IntelSDK(AbstractSGXSDK):
     def detect(elffile, binpath):
         sec = elffile.get_section_by_name(EXPECTED_SECTION)
 
-        if not sec or not type(sec) == elftools.elf.sections.NoteSection:
+        if not sec or not isinstance(sec, elftools.elf.sections.NoteSection):
             return ""
 
         logger.debug(f"Found section {EXPECTED_SECTION}. This could be an Intel SDK.")

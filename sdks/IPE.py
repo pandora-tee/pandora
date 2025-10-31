@@ -44,9 +44,9 @@ class openIPESDK(AbstractSDK):
 
     @staticmethod
     def detect(elffile, binpath):
-        if elffile.get_section_by_name(IPE_SECTION) != None:
+        if elffile.get_section_by_name(IPE_SECTION) is not None:
             return "code"
-        elif elffile.get_section_by_name(BOOTCODE_SECTION) != None:
+        elif elffile.get_section_by_name(BOOTCODE_SECTION) is not None:
             return "firmware"
         return ""
 
