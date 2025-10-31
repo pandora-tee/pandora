@@ -14,29 +14,29 @@ class AbstractSDK:
 
     @staticmethod
     def match_strings(binpath, sub):
-        strings = subprocess.run(['strings', binpath], check=True, capture_output=True, text=True).stdout.split('\n')
-        sdk_version = [ s for s in strings if sub in s ]
-        assert len(sdk_version) == 1, f'More than one {sub} string detected.'
-        return sdk_version[0][len(sub):]
+        strings = subprocess.run(["strings", binpath], check=True, capture_output=True, text=True).stdout.split("\n")
+        sdk_version = [s for s in strings if sub in s]
+        assert len(sdk_version) == 1, f"More than one {sub} string detected."
+        return sdk_version[0][len(sub) :]
 
     @staticmethod
     def get_sdk_name():
-        raise 'Not implemented'
+        raise "Not implemented"
 
     def init_eenter_state(self, eenter_state):
-        raise 'Not implemented'
+        raise "Not implemented"
 
     def get_unmeasured_pages(self):
         return []
 
     def get_encl_size(self):
-        raise 'Not implemented'
+        raise "Not implemented"
 
     def get_max_inst_size(self):
-        raise 'Not implemented'
+        raise "Not implemented"
 
     def get_entry_addr(self):
-        raise 'Not implemented'
+        raise "Not implemented"
 
     def get_base_addr(self):
         AbstractSDK.get_load_addr()
@@ -47,7 +47,7 @@ class AbstractSDK:
         @return the base address that this SDK requests to be loaded at.
         Values < 0 are ignored and defaulted to angr
         """
-        return -1 # Default: Let angr decide (i.e., skip this setting)
+        return -1  # Default: Let angr decide (i.e., skip this setting)
 
     def get_enclave_range(self):
         min_addr = self.get_base_addr()
@@ -62,11 +62,11 @@ class AbstractSDK:
         Default backend is elf as most executables will be an elf file.
         However, enclave dumps may want to utilize the blob backend of angr.
         """
-        return 'elf'
+        return "elf"
 
     @staticmethod
     def get_angr_arch():
-        raise 'Not implemented'
+        raise "Not implemented"
 
     def modify_init_state(self, init_state):
         """
@@ -92,6 +92,7 @@ class AbstractSDK:
 
     def override_executable(self, addr):
         return False
+
 
 class HasJSONLayout:
     """

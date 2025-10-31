@@ -6,7 +6,7 @@ class BasePlugin:
     An abstract base class specifying the interface for Pandora plugins.
     """
 
-    def __init__(self, init_state, reporter, usr_act=UserAction.NONE, shortname=''):
+    def __init__(self, init_state, reporter, usr_act=UserAction.NONE, shortname=""):
         self.action = usr_act
         self.reporter = reporter
         self.shortname = shortname
@@ -46,9 +46,7 @@ class BasePlugin:
         Plugins can be activated via the commandline by their short name. For
         each each plugin, a short help text can be queried.
         """
-        return (
-            "The Base Plugin should never be included as it does nothing."
-        )
+        return "The Base Plugin should never be included as it does nothing."
 
     @staticmethod
     def is_default_plugin():

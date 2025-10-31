@@ -9,7 +9,8 @@ from utilities.angr_helper import get_reg_value, set_reg_value
 
 logger = logging.getLogger(__name__)
 
-EXPECTED_SECTION = r'.text.sm.*'
+EXPECTED_SECTION = r".text.sm.*"
+
 
 class SancusSDK(AbstractSDK):
     project = None
@@ -19,37 +20,38 @@ class SancusSDK(AbstractSDK):
         self.project = init_state.project
         self.enclave = SancusSDK.get_sancus_enclave(elffile)
 
-        self.unprotected_entry = self.get_symbol_addr('__unprotected_entry')
-        self.textStart = self.get_symbol_addr(f'__sm_{self.enclave}_public_start')
-        self.textEnd = self.get_symbol_addr(f'__sm_{self.enclave}_public_end')
-        self.dataStart = self.get_symbol_addr(f'__sm_{self.enclave}_secret_start')
-        self.dataEnd = self.get_symbol_addr(f'__sm_{self.enclave}_secret_end')
+        self.unprotected_entry = self.get_symbol_addr("__unprotected_entry")
+        self.textStart = self.get_symbol_addr(f"__sm_{self.enclave}_public_start")
+        self.textEnd = self.get_symbol_addr(f"__sm_{self.enclave}_public_end")
+        self.dataStart = self.get_symbol_addr(f"__sm_{self.enclave}_secret_start")
+        self.dataEnd = self.get_symbol_addr(f"__sm_{self.enclave}_secret_end")
         logger.info(f'Found Sancus enclave "{self.enclave}":')
-        logger.info(f'\ttext range: [{self.textStart:#x},{self.textEnd:#x}[')
-        logger.info(f'\tdata range: [{self.dataStart:#x},{self.dataEnd:#x}[')
+        logger.info(f"\ttext range: [{self.textStart:#x},{self.textEnd:#x}[")
+        logger.info(f"\tdata range: [{self.dataStart:#x},{self.dataEnd:#x}[")
 
     def get_symbol_addr(self, name):
         s = self.project.loader.find_symbol(name)
-        assert(s)
+        assert s
         return s.linked_addr
 
     """
         TODO: for now just return the first enclave in case of multiple enclaves
     """
+
     @staticmethod
     def get_sancus_enclave(elf_file):
         pattern = re.compile(EXPECTED_SECTION)
         for section in elf_file.iter_sections():
             if pattern.search(section.name):
                 logger.debug(f"Found enclave section {section.name}")
-                return section.name.removeprefix('.text.sm.')
+                return section.name.removeprefix(".text.sm.")
         return None
 
     @staticmethod
     def detect(elffile, binpath):
         if SancusSDK.get_sancus_enclave(elffile) != None:
-            return 'v1'
-        return ''
+            return "v1"
+        return ""
 
     @staticmethod
     def get_sdk_name():
@@ -57,7 +59,7 @@ class SancusSDK(AbstractSDK):
 
     @staticmethod
     def get_angr_arch():
-        return 'msp430'
+        return "msp430"
 
     def get_base_addr(self):
         return self.textStart
@@ -83,24 +85,27 @@ class SancusSDK(AbstractSDK):
         # Sancus enclaves can legally jump out, but compiler-generated enclaves should
         # normally only jump to the unprotected_entry symbol or the provided continuation
         # point (which we constrain to unprotected_entry as well)
-        return [(self.textStart, self.textEnd-1), (self.unprotected_entry, self.unprotected_entry+self.get_max_inst_size())]
+        return [(self.textStart, self.textEnd - 1), (self.unprotected_entry, self.unprotected_entry + self.get_max_inst_size())]
 
     def init_eenter_state(self, eenter_state):
-        set_reg_value(eenter_state, 'ip', self.get_entry_addr())
+        set_reg_value(eenter_state, "ip", self.get_entry_addr())
 
-        #Indicate states where the code writes to its own text section (such that these can be removed to errored stash)
-        eenter_state.globals['sancus_text_range'] = (self.textStart, self.textEnd-1)
-        eenter_state.inspect.b('trusted_mem_write', when=BP_AFTER, action=check_write_to_text_section)
+        # Indicate states where the code writes to its own text section (such that these can be removed to errored stash)
+        eenter_state.globals["sancus_text_range"] = (self.textStart, self.textEnd - 1)
+        eenter_state.inspect.b("trusted_mem_write", when=BP_AFTER, action=check_write_to_text_section)
+
 
 """
 Function that changes the 'written_to_text_section' variable if there will be written to the
 text section of the enclave
 """
+
+
 def check_write_to_text_section(state):
     addr = state.inspect.mem_write_address
     length = state.inspect.mem_write_length
-    encl_range = state.globals['sancus_text_range']
+    encl_range = state.globals["sancus_text_range"]
     write_addr_inside_encl = explorer.enclave.buffer_touches_enclave(state, addr, length, use_enclave_range=[encl_range])
     if write_addr_inside_encl:
         logger.warning(f"Aborting due to write in Sancus text section @{get_reg_value(state, 'ip'):#x} -> {addr}")
-        state.globals['enclave_fault'] = True
+        state.globals["enclave_fault"] = True

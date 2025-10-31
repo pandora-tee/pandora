@@ -5,7 +5,7 @@ from sdks.open_enclave_structs import OESgxEnclaveProperties
 
 logger = logging.getLogger(__name__)
 
-EXPECTED_SECTION = '.oeinfo'
+EXPECTED_SECTION = ".oeinfo"
 
 
 class OpenEnclaveSDK(AbstractSGXSDK):
@@ -19,8 +19,8 @@ class OpenEnclaveSDK(AbstractSGXSDK):
         logger.debug(str(props))
         logger.critical("I don't know what to do with OE enclaves yet. Spawning a shell... figure it out yourself.")
         import IPython
-        IPython.embed()
 
+        IPython.embed()
 
         """
         Notes on how to set up heap,stack, and tcs pages
@@ -44,14 +44,14 @@ class OpenEnclaveSDK(AbstractSGXSDK):
         sec = elffile.get_section_by_name(EXPECTED_SECTION)
 
         if sec:  # OE .oeinfo is not a notes section so we can't do an additional check on it
-            logger.debug(f'Found section {EXPECTED_SECTION}. This could be an Open Enclave SDK.')
-            return 'unknown'
+            logger.debug(f"Found section {EXPECTED_SECTION}. This could be an Open Enclave SDK.")
+            return "unknown"
 
-        return ''
+        return ""
 
     @staticmethod
     def get_sdk_name():
-        return 'Open Enclave SDK'
+        return "Open Enclave SDK"
 
     """
     Notes on OpenEnclave

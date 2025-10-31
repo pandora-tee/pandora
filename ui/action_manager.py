@@ -8,12 +8,12 @@ from utilities.Singleton import Singleton
 logger = logging.getLogger(__name__)
 
 system_events = {
-    'error'    : 'Upon termination with error states.',
-    'explorer' : 'For each symbolic execution step.',
-    'start'    : 'Once before explorer starts symbolic execution.',
-    'reentry'  : 'Every time the enclave is reentered after an EEXIT',
-    'exit'     : 'Once after the explorer finished symbolic execution',
-    'system'   : 'On important pandora system events (like internal errors or warnings)'
+    "error": "Upon termination with error states.",
+    "explorer": "For each symbolic execution step.",
+    "start": "Once before explorer starts symbolic execution.",
+    "reentry": "Every time the enclave is reentered after an EEXIT",
+    "exit": "Once after the explorer finished symbolic execution",
+    "system": "On important pandora system events (like internal errors or warnings)",
 }
 
 
@@ -36,7 +36,7 @@ class ActionManager(metaclass=Singleton):
 
         if act_events:
             logger.debug("Loading requested actions:")
-            for (event, action) in act_events:
+            for event, action in act_events:
                 self.actions[event] = UserAction(action)
                 logger.debug(f"\tRegistered user action {action} for {event}")
         else:

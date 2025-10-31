@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class AttackerTaintConservative(claripy.Annotation):
-
     # A nice feature of annotation is that we can actually attach some arguments to it
     # (Name of initial register, address, etc.)
     name = "Unnamed"
@@ -21,7 +20,7 @@ class AttackerTaintConservative(claripy.Annotation):
         self.name = name
 
     def __str__(self):
-        return f'AttackerTaintConservative<{self.name}>'
+        return f"AttackerTaintConservative<{self.name}>"
 
     @property
     def eliminatable(self):  # pylint:disable=no-self-use
@@ -66,7 +65,7 @@ class AttackerTaintConservative(claripy.Annotation):
                 new_annotation = None
         else:
             # Sanity check: this case should never happen
-            raise ValueError(f'Relocating AttackerTaintConservative annotation not in src {src.annotations}')
+            raise ValueError(f"Relocating AttackerTaintConservative annotation not in src {src.annotations}")
 
         return new_annotation
 
@@ -80,6 +79,7 @@ class AttackerTaintLiberal(claripy.Annotation):
     """
     The liberal taint is currently not used.
     """
+
     @property
     def eliminatable(self):
         return True
@@ -99,9 +99,12 @@ def get_tainted_reg(state, reg_name, size):
     """
     attacker_taint = AttackerTaintConservative()
     attacker_taint.set_name(reg_name)
-    return claripy.BVS(f'{reg_name}_attacker', size,  # key=("{}_attacker".format(reg_name)),
-                            # annotations=[AttackerTaintLiberal()])
-                            annotations = [attacker_taint, UninitializedAnnotation()])
+    return claripy.BVS(
+        f"{reg_name}_attacker",
+        size,  # key=("{}_attacker".format(reg_name)),
+        # annotations=[AttackerTaintLiberal()])
+        annotations=[attacker_taint, UninitializedAnnotation()],
+    )
 
 
 def get_tainted_mem_bits(state, size, annotations=None):
@@ -112,15 +115,14 @@ def get_tainted_mem_bits(state, size, annotations=None):
     """
     attacker_taint = AttackerTaintConservative()
     # attacker_taint = AttackerTaintLiberal()
-    attacker_taint.set_name('memory')
+    attacker_taint.set_name("memory")
     if annotations:
         annotations.append(attacker_taint)
     else:
         annotations = [attacker_taint]
 
     annotations.append(UninitializedAnnotation())
-    return claripy.BVS('attacker_mem', size,
-                            annotations=annotations)
+    return claripy.BVS("attacker_mem", size, annotations=annotations)
 
 
 def add_taint(bvv):

@@ -11,46 +11,43 @@ from utilities.Singleton import Singleton
 
 logger = logging.getLogger(__name__)
 
+
 # TODO probably should better subclass this w/ and w/o symbol table..
 class SymbolManager(metaclass=Singleton):
-
-    def __init__(self, init_state=None, elf_file=None, exec_path=None, base_addr=0, sdk_name=''):
+    def __init__(self, init_state=None, elf_file=None, exec_path=None, base_addr=0, sdk_name=""):
         """
         Expects the symbol table to be in the form of
         [(addr, name)]
         """
         if init_state is None:
-            logger.error('SymbolManager called without init state. Failed setup.')
+            logger.error("SymbolManager called without init state. Failed setup.")
             exit(1)
         self.init_state = init_state
         self.exec_path = exec_path
 
-        if sdk_name == 'Enclave memory dump' and elf_file is None:
-            logger.critical('Running a dump file without giving the --sdk-elf-file option means that we will not have access to symbols! We suggest to use the --sdk-elf-file option and give an elf file.')
+        if sdk_name == "Enclave memory dump" and elf_file is None:
+            logger.critical("Running a dump file without giving the --sdk-elf-file option means that we will not have access to symbols! We suggest to use the --sdk-elf-file option and give an elf file.")
 
         self._create_symbol_table(elf_file, base_addr)
         self.objdump = None
 
     def _create_objdump(self, arch):
-        bin = 'objdump'
-        if 'x86' not in arch:
+        bin = "objdump"
+        if "x86" not in arch:
             # XXX we keep a local copy of MSPGCC msp430-objdump 2.21.1 (mspgcc LTS 20120406 unpatched)
             # as newer objdump seems to forcibly interpret Sancus instructions as 20-bit CALLA instructions..
-            bin = f'./bin/{arch.lower()}-objdump'
-        d = subprocess.run([bin, '-D', self.exec_path], capture_output=True)
-        self.objdump = d.stdout.decode('utf8')
+            bin = f"./bin/{arch.lower()}-objdump"
+        d = subprocess.run([bin, "-D", self.exec_path], capture_output=True)
+        self.objdump = d.stdout.decode("utf8")
 
-    def get_objdump(self, start, end, arch='x86_64'):
+    def get_objdump(self, start, end, arch="x86_64"):
         if not self.objdump:
             self._create_objdump(arch)
 
         # Regex to match the address in objdump format
-        address_pattern = re.compile(r'^\s*([0-9a-fA-F]+)(?:\s*<[^>]+>)?:')
+        address_pattern = re.compile(r"^\s*([0-9a-fA-F]+)(?:\s*<[^>]+>)?:")
 
-        output = "\n".join(
-            line for line in self.objdump.splitlines()
-            if (match := address_pattern.match(line)) and start <= int(match.group(1), 16) <= end
-        ) + "\n"
+        output = "\n".join(line for line in self.objdump.splitlines() if (match := address_pattern.match(line)) and start <= int(match.group(1), 16) <= end) + "\n"
         return output
 
     def _create_symbol_table(self, elf_file, base_addr):
@@ -64,12 +61,12 @@ class SymbolManager(metaclass=Singleton):
         self.symbol_table = []
         self.elf_name = str(elf_file)
 
-        elf_stream = open(elf_file, 'rb')
+        elf_stream = open(elf_file, "rb")
         if not file_stream_is_elf_file(elf_stream):
-            logger.error(f'File {elf_file} is not a legit elf file!')
+            logger.error(f"File {elf_file} is not a legit elf file!")
             exit(1)
 
-        symtab = ELFFile(elf_stream).get_section_by_name('.symtab')
+        symtab = ELFFile(elf_stream).get_section_by_name(".symtab")
 
         # this is currently a hack: we probably want to specify
         # the offset when providing an ELF symbol file via the command
@@ -79,33 +76,33 @@ class SymbolManager(metaclass=Singleton):
         # the TCS entry point so the offset can be auto calculated :)
         self.rebase_offset = base_addr
         sdk_rebases = {
-            'enclaveos' : 0xFE78000, # zircon
-            'gramine'   : 0xFE3E000,
-            'scone-5.7' : 0xFFFEFF600,
-            'scone-5.8' : 0x1000010000, # scone hello_1798.objcopy.in
-            'gotee'     : -0x2700,
+            "enclaveos": 0xFE78000,  # zircon
+            "gramine": 0xFE3E000,
+            "scone-5.7": 0xFFFEFF600,
+            "scone-5.8": 0x1000010000,  # scone hello_1798.objcopy.in
+            "gotee": -0x2700,
         }
         for partial_name in sdk_rebases.keys():
             if partial_name in self.elf_name:
                 self.rebase_offset = sdk_rebases[partial_name]
-                logger.info(f'Identified this as a {partial_name} SDK and enforcing a symbol offset of {self.rebase_offset:#x}')
+                logger.info(f"Identified this as a {partial_name} SDK and enforcing a symbol offset of {self.rebase_offset:#x}")
                 break
 
         for s in symtab.iter_symbols():
-            t = s.entry['st_info']['type']
-            if t == 'STT_FUNC' or t == 'STT_OBJECT' or t == 'STT_NOTYPE':
-                self.symbol_table.append((s.entry['st_value'] + self.rebase_offset, s.name))
+            t = s.entry["st_info"]["type"]
+            if t == "STT_FUNC" or t == "STT_OBJECT" or t == "STT_NOTYPE":
+                self.symbol_table.append((s.entry["st_value"] + self.rebase_offset, s.name))
 
         self.symbol_table.sort(key=lambda t: t[0])
 
         # convert tuple (addr,name) to map(addr:name)
-        self.symbol_table = {k:v for (k,v) in self.symbol_table}
+        self.symbol_table = {k: v for (k, v) in self.symbol_table}
 
         # Keep a list of the symbol table to not convert it on every call
         self.symbol_table_list = list(self.symbol_table)
         self.symbol_table_value_list = list(self.symbol_table.values())
 
-        #logger.debug(f'Parsed these elf symbols to be used:\n{ui.log_format.format_fields(self.symbol_table)}')
+        # logger.debug(f'Parsed these elf symbols to be used:\n{ui.log_format.format_fields(self.symbol_table)}')
 
     def _bisect_idx(self, addr):
         # use binary search to find symbol closest before given addr
@@ -189,16 +186,16 @@ class SymbolManager(metaclass=Singleton):
             if offset < 0 or offset > 0x1000:
                 return hex(addr)
 
-            offset_str = f'+{offset:#x}' if offset != 0 else ''
-            return f'{addr:#x} <{sym_name}{offset_str}>'
+            offset_str = f"+{offset:#x}" if offset != 0 else ""
+            return f"{addr:#x} <{sym_name}{offset_str}>"
 
     def get_symbol_with_offset(self, addr):
         """
         returns "0xdeadbeef <closest_symbol+0xoffset>"
         """
         sym_name, offset = self._get_addr_offset(addr)
-        offset_str = f'+{offset:#x}' if offset != 0 else ''
-        return f'{addr:#x} <{sym_name}{offset_str}>'
+        offset_str = f"+{offset:#x}" if offset != 0 else ""
+        return f"{addr:#x} <{sym_name}{offset_str}>"
 
     def get_rebased_addr(self, addr):
         if self.symbol_table is None:

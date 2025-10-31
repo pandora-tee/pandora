@@ -12,48 +12,44 @@ from utilities.angr_helper import get_reg_size, set_reg_value
 
 logger = logging.getLogger(__name__)
 
+
 # TODO some sanity checks here would help catching sdk bugs: e.g., assert tcs_addr in enclave range(!)
 def eenter(eenter_state):
-    logger.info(' --- Initializing state and making it ready for eenter.')
+    logger.info(" --- Initializing state and making it ready for eenter.")
 
     # First, call the eenter breakpoint
-    eenter_state._inspect(
-        "eenter",
-        BP_BEFORE
-    )
+    eenter_state._inspect("eenter", BP_BEFORE)
 
     # Start the setup by marking the state global as not active. This should disable all breakpoints like tainting
-    eenter_state.globals['pandora_active'] = False
+    eenter_state.globals["pandora_active"] = False
 
     # Initialize all registers as being attacker tainted
     for reg_name in eenter_state.project.arch.register_names.values():
         size = get_reg_size(eenter_state, reg_name)
-        reg = taint.get_tainted_reg(eenter_state, reg_name, size*8)
+        reg = taint.get_tainted_reg(eenter_state, reg_name, size * 8)
         set_reg_value(eenter_state, reg_name, reg)
 
     # After tainting all registers, fill registers that are overwritten by EENTER
     SDKManager().init_eenter_state(eenter_state)
 
     # Set the eexit global to False
-    eenter_state.globals['eexit'] = False
-    eenter_state.globals['protections_disabled'] = False
+    eenter_state.globals["eexit"] = False
+    eenter_state.globals["protections_disabled"] = False
 
     # This will be set when the state encounters an event that would cause a hardware exception/fault,
     # so as to abort the symbolic execution path
-    eenter_state.globals['enclave_fault'] = False
+    eenter_state.globals["enclave_fault"] = False
 
     # At the moment no hooked instruction has been skipped
-    eenter_state.globals['prev_skipped_inst'] = None
+    eenter_state.globals["prev_skipped_inst"] = None
 
     # Finalize the setup by marking the state global as active
-    eenter_state.globals['pandora_active'] = True
-    logger.info(' --- State initialization completed.')
+    eenter_state.globals["pandora_active"] = True
+    logger.info(" --- State initialization completed.")
 
     # Lastly, call the eenter breakpoint again
-    eenter_state._inspect(
-        "eenter",
-        BP_AFTER
-    )
+    eenter_state._inspect("eenter", BP_AFTER)
+
 
 def get_enclave_range():
     """
@@ -61,11 +57,14 @@ def get_enclave_range():
     """
     return SDKManager().get_enclave_range()
 
+
 """
 To speed things up, wrap the rest of the function in an inner function that utilizes lru_caching
 Unfortunately, states are not always hashable (sometimes they are weak proxies). This is why we
 restrict the caching to addr and length plus the enclave range.
 """
+
+
 @lru_cache(maxsize=256, typed=False)
 def _check_touches(addr, length, enclave_min_addr, enclave_max_addr, solver):
     if type(addr) is int:
@@ -79,8 +78,7 @@ def _check_touches(addr, length, enclave_min_addr, enclave_max_addr, solver):
             length = solver.eval_one(length)
         else:
             length_max = solver.max_int(length)
-            logger.debug(
-                f'Concretized symbolic length in touches enclave check. Length is {length} and I concretized to {length_max}')
+            logger.debug(f"Concretized symbolic length in touches enclave check. Length is {length} and I concretized to {length_max}")
             length = length_max
 
     """
@@ -104,14 +102,14 @@ def _check_touches(addr, length, enclave_min_addr, enclave_max_addr, solver):
 
         # If the addr does not wrap, then do the normal check with an overwritten max_addr_before_enclave
         does_not_wrap = bv_addr.ULT(bv_addr + length)
-        bv_addr_end = bv_addr + length - 1 # Inclusive end
+        bv_addr_end = bv_addr + length - 1  # Inclusive end
         touches_enclave = claripy.Or(
             # Either the buffer start is inside the enclave range
             claripy.And(bv_addr.UGE(enclave_min_addr), bv_addr.ULE(enclave_max_addr)),
             # Or the buffer end is inside the enclave range
             claripy.And(bv_addr_end.UGE(enclave_min_addr), bv_addr_end.ULE(enclave_max_addr)),
             # Or the start is before the enclave start AND the end is after the enclave end (encapsulates the enclave)
-            claripy.And(bv_addr.ULE(enclave_min_addr), bv_addr_end.UGE(enclave_max_addr))
+            claripy.And(bv_addr.ULE(enclave_min_addr), bv_addr_end.UGE(enclave_max_addr)),
         )
         no_wrap_and_touches = claripy.And(does_not_wrap, touches_enclave)
 
@@ -119,11 +117,12 @@ def _check_touches(addr, length, enclave_min_addr, enclave_max_addr, solver):
 
     else:
         # No overflow into enclave possible. Do the normal check
-        e  = touches_enclave
+        e = touches_enclave
 
     return solver.satisfiable(extra_constraints=[e])
 
-def buffer_touches_enclave(state, addr, length, use_enclave_range : None | [tuple] = None):
+
+def buffer_touches_enclave(state, addr, length, use_enclave_range: None | [tuple] = None):
     """
     Function to determine whether the buffer [addr, addr+length[ *touches* the enclave range.
     --> Checks whether: enclave_min-len < addr && addr <= enclave_max
@@ -140,11 +139,14 @@ def buffer_touches_enclave(state, addr, length, use_enclave_range : None | [tupl
     # Call this inner function (depending on cache, this call will be fast)
     return any(_check_touches(addr, length, enclave_min, enclave_max, state.solver) for (enclave_min, enclave_max) in use_enclave_range)
 
+
 """
 To speed things up, wrap the rest of the function in an inner function that utilizes lru_caching
 Unfortunately, states are not always hashable (sometimes they are weak proxies), so we pass the solver.
 Typed is set to default False to get the speedup and not incur additional checks.
 """
+
+
 @lru_cache(maxsize=256, typed=False)
 def _check_entirely_inside(addr, length, enclave_min_addr, enclave_max_addr, solver):
     if type(length) is not int:
@@ -152,7 +154,7 @@ def _check_entirely_inside(addr, length, enclave_min_addr, enclave_max_addr, sol
             length = solver.eval_one(length)
         else:
             length_max = solver.max_int(length)
-            logger.debug(f'Concretized symbolic length in entirely inside enclave check. Length is {length} and I concretized to {length_max}')
+            logger.debug(f"Concretized symbolic length in entirely inside enclave check. Length is {length} and I concretized to {length_max}")
             length = length_max
 
     """
@@ -187,7 +189,7 @@ def _check_entirely_inside(addr, length, enclave_min_addr, enclave_max_addr, sol
     return not solver.satisfiable(extra_constraints=[e])
 
 
-def buffer_entirely_inside_enclave(state, address, buffer_length, use_enclave_range : None | [tuple] = None):
+def buffer_entirely_inside_enclave(state, address, buffer_length, use_enclave_range: None | [tuple] = None):
     """
     Function to determine whether the buffer [addr, addr+length[ always lies *entirely* inside the enclave.
     --> Checks whether: enclave_min <= addr && addr+len-1 <= enclave_max

@@ -23,8 +23,9 @@ from .techniques.TraceLogger import TraceLogger
 
 logger = logging.getLogger(__name__)
 
+
 class AbstractExplorer(metaclass=Singleton):
-    def __init__(self, binary_path='', action=UserAction.NONE, base_addr=0, angr_backend='elf', angr_arch='x86_64'):
+    def __init__(self, binary_path="", action=UserAction.NONE, base_addr=0, angr_backend="elf", angr_arch="x86_64"):
         self.action = action
         self.binary_path = str(binary_path)
         self.base_addr = base_addr
@@ -34,15 +35,15 @@ class AbstractExplorer(metaclass=Singleton):
         """
         # First, register enclave memory as default memory in simstate
         from angr.sim_state import SimState
-        SimState.register_default('sym_memory', EnclaveAwareMemory)
+
+        SimState.register_default("sym_memory", EnclaveAwareMemory)
 
         # Second, register Pandora event_types and Pandora inspect_attributes with angrs inspect module
         angr.state_plugins.inspect.event_types = angr.state_plugins.inspect.event_types.union(PANDORA_EVENT_TYPES)
-        angr.state_plugins.inspect.inspect_attributes = angr.state_plugins.inspect.inspect_attributes.union(
-            PANDORA_INSPECT_ATTRIBUTES)
+        angr.state_plugins.inspect.inspect_attributes = angr.state_plugins.inspect.inspect_attributes.union(PANDORA_INSPECT_ATTRIBUTES)
 
         # Last, create angr project and initial state
-        angr_main_opts = {'backend': angr_backend, 'arch': angr_arch}
+        angr_main_opts = {"backend": angr_backend, "arch": angr_arch}
 
         """
         Some enclaves write to executable pages. Angr by default does not support this and support has to be explicitly
@@ -54,15 +55,15 @@ class AbstractExplorer(metaclass=Singleton):
         selfmodifying_code = po.PandoraOptions().get_option(po.PANDORA_EXPLORE_ENABLE_SELFMODIFYING_CODE)
 
         if base_addr >= 0:
-            angr_main_opts['base_addr'] = base_addr
-            angr_main_opts['force_rebase'] = True
-        logger.debug(f'Creating angr project with selfmodifying_code={selfmodifying_code} and extra options\n{log_format.format_fields(angr_main_opts)}')
+            angr_main_opts["base_addr"] = base_addr
+            angr_main_opts["force_rebase"] = True
+        logger.debug(f"Creating angr project with selfmodifying_code={selfmodifying_code} and extra options\n{log_format.format_fields(angr_main_opts)}")
         if selfmodifying_code:
-            logger.warning('Pandora/angr support for selfmodifying code is experimental, expect issues (e.g., UD2 is incorrectly skipped over)!')
+            logger.warning("Pandora/angr support for selfmodifying code is experimental, expect issues (e.g., UD2 is incorrectly skipped over)!")
         self.proj = angr.Project(binary_path, main_opts=angr_main_opts, engine=PandoraEngine, selfmodifying_code=selfmodifying_code)
         self.initial_state = None
         self.simgr = None
-        logger.debug('Angr project created and Explorer initialized.')
+        logger.debug("Angr project created and Explorer initialized.")
 
     def get_init_state(self):
         if not self.initial_state:
@@ -85,14 +86,14 @@ class AbstractExplorer(metaclass=Singleton):
             # Add all pandora options to initial state
             for k, v in po.PandoraOptions().get_options_dict().items():
                 self.initial_state.options.register_option(k, {type(v)}, default=v)
-                logger.debug(f'PandoraOptions: Registering {k} (type {type(v)}, value {str(v)}) with initial state.')
+                logger.debug(f"PandoraOptions: Registering {k} (type {type(v)}, value {str(v)}) with initial state.")
 
-            logger.info(f'Pandora Options on start:\n{ui.log_format.format_fields(po.PandoraOptions().get_options_dict(), normal_format=True)}')
+            logger.info(f"Pandora Options on start:\n{ui.log_format.format_fields(po.PandoraOptions().get_options_dict(), normal_format=True)}")
 
             # Optionally increase Python's recursion limit for exploring loops with symbolic upper bound
-            stack_depth = po.PandoraOptions().get_option('PANDORA_EXPLORE_STACK_DEPTH')
+            stack_depth = po.PandoraOptions().get_option("PANDORA_EXPLORE_STACK_DEPTH")
             if stack_depth != po.PANDORA_EXPLORE_STACK_DEPTH_DEFAULT:
-                logger.info(f'Setting maximum depth of the Python interpreter stack to {stack_depth}')
+                logger.info(f"Setting maximum depth of the Python interpreter stack to {stack_depth}")
                 sys.setrecursionlimit(stack_depth)
 
         return self.initial_state
@@ -102,7 +103,7 @@ class AbstractExplorer(metaclass=Singleton):
         Performs a single step in the exploration.
         Should return a tuple of a boolean whether exploration is finished and a list of errored states.
         """
-        raise 'Not implemented'
+        raise "Not implemented"
 
     def get_all_traces(self):
         s = []
@@ -112,28 +113,26 @@ class AbstractExplorer(metaclass=Singleton):
 
     def get_running_statistics(self):
         stats = {
-            'active': len(self.simgr.active),
+            "active": len(self.simgr.active),
         }
 
         if po.PandoraOptions().get_option(po.PANDORA_EXPLORE_DEPTH_FIRST):
-            stats['deferred'] = len(self.simgr.stashes['deferred'])
+            stats["deferred"] = len(self.simgr.stashes["deferred"])
 
         if po.PandoraOptions().get_option(po.PANDORA_EXPLORE_REENTRY_COUNT) > 0:
-            stats['new_uniques'] = len(self.simgr.stashes['new_uniques'])
-            stats['uniques'] = len(self.simgr.stashes['uniques'])
+            stats["new_uniques"] = len(self.simgr.stashes["new_uniques"])
+            stats["uniques"] = len(self.simgr.stashes["uniques"])
         else:
-            stats['eexited'] = len(self.simgr.eexited)
+            stats["eexited"] = len(self.simgr.eexited)
 
         return stats
 
     def print_stash_sizes(self):
         if not self.simgr:
-            return 'Stashes empty.'
+            return "Stashes empty."
         else:
-            stash_state = ', '.join([
-                f'{k} ({len(self.simgr.stashes.get(k))})' for k in filter(lambda k: k != "errored", self.simgr.stashes.keys())
-            ])
-            stash_state += f' errored ({len(self.simgr.errored)})'
+            stash_state = ", ".join([f"{k} ({len(self.simgr.stashes.get(k))})" for k in filter(lambda k: k != "errored", self.simgr.stashes.keys())])
+            stash_state += f" errored ({len(self.simgr.errored)})"
             return stash_state
 
     def get_cfg_data(self):
@@ -151,24 +150,23 @@ class AbstractExplorer(metaclass=Singleton):
                 s.append(get_state_backtrace_compact(state))
         return s
 
-class BasicBlockExplorer(AbstractExplorer):
 
+class BasicBlockExplorer(AbstractExplorer):
     def _init_simgr(self):
         if not self.simgr:
-            ui.log_format.dump_regs(self.initial_state, logger, logging.INFO, header_msg='Initial register state')
+            ui.log_format.dump_regs(self.initial_state, logger, logging.INFO, header_msg="Initial register state")
 
             # Create the simulation manager on first step
-            logger.info('Starting stepping. Creating simulation manager.')
+            logger.info("Starting stepping. Creating simulation manager.")
 
             # Enable Pandora options on the init state
             pandora_options = po.PandoraOptions().get_options_dict()
-            for k,v in pandora_options.items():
+            for k, v in pandora_options.items():
                 self.initial_state.options[k] = v
-                logger.debug(f'Set Pandora option {k} to {v}')
+                logger.debug(f"Set Pandora option {k} to {v}")
 
             # Now create the manager with the init state
             self.simgr = self.proj.factory.simgr(self.initial_state)  # , save_unsat=True)`
-
 
             """
             Set up the exploration techniques we want to use.
@@ -194,11 +192,13 @@ class BasicBlockExplorer(AbstractExplorer):
             self.simgr.use_technique(ControlFlowTracker(self.initial_state))
 
             # Enclave reentry has to be the last one to add
-            self.simgr.use_technique(EnclaveReentry(
-                    pandora_options[po.PANDORA_EXPLORE_REENTRY_COUNT], # Take reentry count from options
+            self.simgr.use_technique(
+                EnclaveReentry(
+                    pandora_options[po.PANDORA_EXPLORE_REENTRY_COUNT],  # Take reentry count from options
                     self.initial_state,
-                    {self.initial_state}, # Prime the unique set with the init state
-                    user_action=ActionManager().actions['reentry'])
+                    {self.initial_state},  # Prime the unique set with the init state
+                    user_action=ActionManager().actions["reentry"],
+                )
             )
 
     def make_step(self):
@@ -206,16 +206,16 @@ class BasicBlockExplorer(AbstractExplorer):
             self._init_simgr()
 
         # Perform the step action if requested by the user
-        self.action(state=self.simgr.active, info='[simgr.step]')
+        self.action(state=self.simgr.active, info="[simgr.step]")
 
         # Move eexited states to the eexited stash (do this before stepping to enable the enclave reentry technique)
-        self.simgr.move(from_stash='active', to_stash='eexited', filter_func=lambda s: s.globals['eexit'] is True)
+        self.simgr.move(from_stash="active", to_stash="eexited", filter_func=lambda s: s.globals["eexit"] is True)
 
         # Move states that would result in runtime exceptions generated by the hardware to errored list
-        self.simgr.move(from_stash='active', to_stash='incorrect', filter_func=lambda s: s.globals['enclave_fault'] is True)
+        self.simgr.move(from_stash="active", to_stash="incorrect", filter_func=lambda s: s.globals["enclave_fault"] is True)
 
         # Move states where the enclave has disabled protections (sancus_disable / 0x1380)
-        self.simgr.move(from_stash='active', to_stash='deadended', filter_func=lambda s: s.globals['protections_disabled'] is True)
+        self.simgr.move(from_stash="active", to_stash="deadended", filter_func=lambda s: s.globals["protections_disabled"] is True)
 
         # Do the step
         self.simgr.step()

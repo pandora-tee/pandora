@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 ENCLAVE_CSS_SIZE = 1808
 ENCLAVE_DATA_SIZE = 18592
 
-LAYOUT_GROUP_FLAG = (1 << 12)
+LAYOUT_GROUP_FLAG = 1 << 12
+
+
 class LayoutId(enum.Enum):
     LAYOUT_ID_HEAP_MIN = 1
     LAYOUT_ID_HEAP_INIT = 2
@@ -43,6 +45,7 @@ class LayoutId(enum.Enum):
     LAYOUT_ID_RSRV_MAX = 22
     INCORRECT_OR_NON_STD_ID = 23
 
+
 class EnclaveCss(ctypes.LittleEndianStructure):
     """
     EnclaveCSS has a flat size of 1808 bytes (static from initial SDK to at least 2.19, July 2022):
@@ -55,8 +58,9 @@ class EnclaveCss(ctypes.LittleEndianStructure):
     } enclave_css_t;
     NOTE: Since we do not really need anything in this struct, we just keep it as a byte array.
     """
+
     _fields_ = [
-        ('data', ctypes.c_uint8 * ENCLAVE_CSS_SIZE),
+        ("data", ctypes.c_uint8 * ENCLAVE_CSS_SIZE),
     ]
 
 
@@ -70,13 +74,11 @@ class DataDirectory(ctypes.LittleEndianStructure):
         uint32_t    size;
     } data_directory_t;
     """
-    _fields_ = [
-        ('offset', ctypes.c_uint32),
-        ('size', ctypes.c_uint32)
-    ]
+
+    _fields_ = [("offset", ctypes.c_uint32), ("size", ctypes.c_uint32)]
 
     def __repr__(self):
-        return f'Data dir entry:<offset: {self.offset:#x}, size: {self.size:#x}>'
+        return f"Data dir entry:<offset: {self.offset:#x}, size: {self.size:#x}>"
 
 
 class Metadata(ctypes.LittleEndianStructure):
@@ -100,34 +102,29 @@ class Metadata(ctypes.LittleEndianStructure):
         uint8_t             data[18592];
     }metadata_t;
     """
+
     _fields_ = [
-        ('magic_num', ctypes.c_uint64),
-        ('version', ctypes.c_uint64),
-        ('size', ctypes.c_uint32),
-        ('tcs_policy', ctypes.c_uint32),
-        ('ssa_frame_size', ctypes.c_uint32),
-        ('max_save_buffer_size', ctypes.c_uint32),
-        ('desired_misc_select', ctypes.c_uint32),
-        ('tcs_min_pool', ctypes.c_uint32),
-        ('enclave_size', ctypes.c_uint64),
-        ('attributes', SgxAttributes),
-        ('enclave_css', EnclaveCss),
-        ('dirs', DataDirectory * 2),
-        ('data', ctypes.c_uint8 * ENCLAVE_DATA_SIZE),
+        ("magic_num", ctypes.c_uint64),
+        ("version", ctypes.c_uint64),
+        ("size", ctypes.c_uint32),
+        ("tcs_policy", ctypes.c_uint32),
+        ("ssa_frame_size", ctypes.c_uint32),
+        ("max_save_buffer_size", ctypes.c_uint32),
+        ("desired_misc_select", ctypes.c_uint32),
+        ("tcs_min_pool", ctypes.c_uint32),
+        ("enclave_size", ctypes.c_uint64),
+        ("attributes", SgxAttributes),
+        ("enclave_css", EnclaveCss),
+        ("dirs", DataDirectory * 2),
+        ("data", ctypes.c_uint8 * ENCLAVE_DATA_SIZE),
     ]
 
     def __repr__(self):
-        return f'Intel SGX SDK Metadata Object <' \
-               f'Magic: {self.magic_num:#x}, ' \
-               f'Version: {self.version:#x}, ' \
-               f'Size: {self.size:#x}' \
-               f'>'
+        return f"Intel SGX SDK Metadata Object <Magic: {self.magic_num:#x}, Version: {self.version:#x}, Size: {self.size:#x}>"
 
     def __str__(self):
-        partial_dict = {n: getattr(self, n) for n, _ in self._fields_
-                        if n not in ['enclave_css', 'data', 'attributes', 'dirs']
-                        }
-        partial_dict['dirs'] = list(self.dirs)
+        partial_dict = {n: getattr(self, n) for n, _ in self._fields_ if n not in ["enclave_css", "data", "attributes", "dirs"]}
+        partial_dict["dirs"] = list(self.dirs)
         return ui.log_format.format_fields(partial_dict)
 
     @staticmethod
@@ -141,7 +138,7 @@ class Metadata(ctypes.LittleEndianStructure):
         """
         offset = 0
         for f, t in Metadata._fields_:
-            if f == 'data':
+            if f == "data":
                 break
 
             offset += ctypes.sizeof(t)
@@ -161,16 +158,16 @@ class PatchEntry(ctypes.LittleEndianStructure):
         uint32_t reserved[4];
     } patch_entry_t;
     """
+
     _fields_ = [
-        ('dst', ctypes.c_uint64),
-        ('src', ctypes.c_uint32),
-        ('size', ctypes.c_uint32),
-        ('reserved', ctypes.c_uint32 * 4),
+        ("dst", ctypes.c_uint64),
+        ("src", ctypes.c_uint32),
+        ("size", ctypes.c_uint32),
+        ("reserved", ctypes.c_uint32 * 4),
     ]
 
     def __repr__(self):
-        return f'PatchEntry<dst: 0x{self.dst:04x}, src: 0x{self.src:04x}, ' \
-               f'size: 0x{self.size:04x}, reserved: {hex(int(binascii.hexlify(bytearray(self.reserved))))}>'
+        return f"PatchEntry<dst: 0x{self.dst:04x}, src: 0x{self.src:04x}, size: 0x{self.size:04x}, reserved: {hex(int(binascii.hexlify(bytearray(self.reserved))))}>"
 
 
 class LayoutEntry(ctypes.LittleEndianStructure):
@@ -189,37 +186,38 @@ class LayoutEntry(ctypes.LittleEndianStructure):
         si_flags_t  si_flags;       /* security info, R/W/X, SECS/TCS/REG/VA */
     } layout_entry_t;
     """
+
     _fields_ = [
-        ('id', ctypes.c_uint16),
-        ('attributes', ctypes.c_uint16),
-        ('page_count', ctypes.c_uint32),
-        ('rva', ctypes.c_uint64),
-        ('content_size', ctypes.c_uint32),
-        ('content_offset', ctypes.c_uint32),
-        ('si_flags', ctypes.c_uint64),
+        ("id", ctypes.c_uint16),
+        ("attributes", ctypes.c_uint16),
+        ("page_count", ctypes.c_uint32),
+        ("rva", ctypes.c_uint64),
+        ("content_size", ctypes.c_uint32),
+        ("content_offset", ctypes.c_uint32),
+        ("si_flags", ctypes.c_uint64),
     ]
 
     def get_name(self):
-        id_name = 'unknown'
+        id_name = "unknown"
         if self.id < LayoutId.INCORRECT_OR_NON_STD_ID.value and self.id > 0:
             lid = LayoutId(self.id)
             id_name = lid.name
         else:
-            logger.critical(f'Intel SDK LayoutID does not conform to format! {self.id:#x}')
+            logger.critical(f"Intel SDK LayoutID does not conform to format! {self.id:#x}")
 
         return id_name
 
     def __repr__(self):
         id_name = self.get_name()
         maxname = len(max(LayoutId.__members__.keys(), key=len))
-        return f'LayoutEntry<id: {id_name.ljust(maxname)}({self.id:#3x}); pages: {self.page_count:3}; rva=[{self.rva:#x}--{self.rva + 4096*self.page_count:#x}]>'
+        return f"LayoutEntry<id: {id_name.ljust(maxname)}({self.id:#3x}); pages: {self.page_count:3}; rva=[{self.rva:#x}--{self.rva + 4096 * self.page_count:#x}]>"
 
     def __str__(self):
         return ui.log_format.format_fields(self.to_dict())
 
     def to_dict(self):
         fields = {n: getattr(self, n) for n, _ in self._fields_}
-        fields['id'] = LayoutId(self.id).name
+        fields["id"] = LayoutId(self.id).name
         return fields
 
 
@@ -237,21 +235,23 @@ class LayoutGroup(ctypes.LittleEndianStructure):
         uint32_t    reserved[4];
     } layout_group_t;
     """
+
     _fields_ = [
-        ('id', ctypes.c_uint16),
-        ('entry_count', ctypes.c_uint16),
-        ('load_times', ctypes.c_uint32),
-        ('load_step', ctypes.c_uint64),
+        ("id", ctypes.c_uint16),
+        ("entry_count", ctypes.c_uint16),
+        ("load_times", ctypes.c_uint32),
+        ("load_step", ctypes.c_uint64),
     ]
 
     def __repr__(self):
-        return 'LayoutGroup with ID {0}'.format(self.id)
+        return "LayoutGroup with ID {0}".format(self.id)
 
     def __str__(self):
         return ui.log_format.format_fields({n: getattr(self, n) for n, _ in self._fields_})
 
     def to_dict(self):
         return {n: getattr(self, n) for n, _ in self._fields_}
+
 
 class Layout(ctypes.Union):
     """
@@ -271,6 +271,7 @@ class Layout(ctypes.Union):
         layout_group_t group;
     } layout_t;
     """
+
     _fields_ = [
         ("entry", LayoutEntry),
         ("group", LayoutGroup),
@@ -300,6 +301,7 @@ class Layout(ctypes.Union):
         else:
             return self.entry.to_dict()
 
+
 class ElrangeConfigEntry(ctypes.LittleEndianStructure):
     """
     Struct for elrange config. Contained in data buffer
@@ -311,6 +313,7 @@ class ElrangeConfigEntry(ctypes.LittleEndianStructure):
     uint64_t elrange_size;
     }elrange_config_entry_t;
     """
+
     _fields_ = [
         ("enclave_image_address", ctypes.c_uint64),
         ("elrange_start_address", ctypes.c_uint64),
@@ -325,6 +328,7 @@ class ElrangeConfigEntry(ctypes.LittleEndianStructure):
 # SGX SDK global_data_t structure definitions (init by URTS and used by TRTS).
 # --> appears quite _unstable_ across SGX-SDK versions!
 ################################################################################
+
 
 class ThreadData(ctypes.LittleEndianStructure):
     """
@@ -362,22 +366,23 @@ class ThreadData(ctypes.LittleEndianStructure):
         sys_word_t  stack_commit_addr;
     } thread_data_t;
     """
+
     _fields_versioned_ = [
-        (2,  0, "self_addr", ctypes.c_uint64),
-        (2,  0, "last_sp", ctypes.c_uint64),
-        (2,  0, "stack_base_addr", ctypes.c_uint64),
-        (2,  0, "stack_limit_addr", ctypes.c_uint64),
-        (2,  0, "first_ssa_gpr", ctypes.c_uint64),
-        (2,  0, "stack_guard", ctypes.c_uint64),
-        (2,  1, "flags", ctypes.c_uint64),
-        (2,  0, "xsave_size", ctypes.c_uint64),
-        (2,  0, "last_error", ctypes.c_uint64),
-        (2,  0, "m_next", ctypes.c_uint64),
-        (2,  0, "tls_addr", ctypes.c_uint64),
-        (2,  0, "tls_array", ctypes.c_uint64),
-        (2,  0, "exception_flag", ctypes.c_uint64),
-        (2,  0, "cxx_thread_info", ctypes.c_uint64 * 6),
-        (2,  0, "stack_commit_addr", ctypes.c_uint64),
+        (2, 0, "self_addr", ctypes.c_uint64),
+        (2, 0, "last_sp", ctypes.c_uint64),
+        (2, 0, "stack_base_addr", ctypes.c_uint64),
+        (2, 0, "stack_limit_addr", ctypes.c_uint64),
+        (2, 0, "first_ssa_gpr", ctypes.c_uint64),
+        (2, 0, "stack_guard", ctypes.c_uint64),
+        (2, 1, "flags", ctypes.c_uint64),
+        (2, 0, "xsave_size", ctypes.c_uint64),
+        (2, 0, "last_error", ctypes.c_uint64),
+        (2, 0, "m_next", ctypes.c_uint64),
+        (2, 0, "tls_addr", ctypes.c_uint64),
+        (2, 0, "tls_array", ctypes.c_uint64),
+        (2, 0, "exception_flag", ctypes.c_uint64),
+        (2, 0, "cxx_thread_info", ctypes.c_uint64 * 6),
+        (2, 0, "stack_commit_addr", ctypes.c_uint64),
     ]
 
     def __str__(self):
@@ -385,8 +390,9 @@ class ThreadData(ctypes.LittleEndianStructure):
 
     def to_dict(self):
         dict = {n: getattr(self, n) for n, _ in self._fields_}
-        dict['cxx_thread_info'] = list(self.cxx_thread_info)
+        dict["cxx_thread_info"] = list(self.cxx_thread_info)
         return dict
+
 
 class GlobalData(ctypes.LittleEndianStructure):
     """
@@ -420,33 +426,32 @@ class GlobalData(ctypes.LittleEndianStructure):
 
     # Class should be dynamically created via method in common.py
     _fields_versioned_ = [
-        (2,  9, "sdk_version", ctypes.c_uint64),
-        (2,  0, "enclave_size", ctypes.c_uint64),
-        (2,  0, "heap_offset", ctypes.c_uint64),
-        (2,  0, "heap_size", ctypes.c_uint64),
-        (2,  6, "rsrv_offset", ctypes.c_uint64),
-        (2,  6, "rsrv_size", ctypes.c_uint64),
-        (2,  8, "rsrv_executable", ctypes.c_uint64),
-        (2,  0, "thread_policy", ctypes.c_uint64),
-        (2,  8, "tcs_max_num", ctypes.c_uint64),
+        (2, 9, "sdk_version", ctypes.c_uint64),
+        (2, 0, "enclave_size", ctypes.c_uint64),
+        (2, 0, "heap_offset", ctypes.c_uint64),
+        (2, 0, "heap_size", ctypes.c_uint64),
+        (2, 6, "rsrv_offset", ctypes.c_uint64),
+        (2, 6, "rsrv_size", ctypes.c_uint64),
+        (2, 8, "rsrv_executable", ctypes.c_uint64),
+        (2, 0, "thread_policy", ctypes.c_uint64),
+        (2, 8, "tcs_max_num", ctypes.c_uint64),
         (2, 17, "tcs_num", ctypes.c_uint64),
-        (2,  0, "td_template", ThreadData),
-        (2,  0, "tcs_template", ctypes.c_uint8 * 72),
-        (2,  0, "layout_entry_num", ctypes.c_uint32),
-        (2,  0, "reserved", ctypes.c_uint32),
-        (2,  6, "layout_table", Layout * 42),
-        (2,  0, "layout_table", Layout * 38),
+        (2, 0, "td_template", ThreadData),
+        (2, 0, "tcs_template", ctypes.c_uint8 * 72),
+        (2, 0, "layout_entry_num", ctypes.c_uint32),
+        (2, 0, "reserved", ctypes.c_uint32),
+        (2, 6, "layout_table", Layout * 42),
+        (2, 0, "layout_table", Layout * 38),
         (2, 14, "enclave_image_address", ctypes.c_uint64),
         (2, 14, "elrange_start_address", ctypes.c_uint64),
         (2, 14, "elrange_size", ctypes.c_uint64),
     ]
 
     def __str__(self):
-        fields = {n: getattr(self, n) for n, _ in self._fields_
-                  if n not in ['reserved'] and 'rsrv' not in n}
-        fields['layout_table'] = list(self.layout_table)[0:self.layout_entry_num]
-        fields['td_template'] = self.td_template.to_dict()
-        s =  ui.log_format.format_fields(fields)
+        fields = {n: getattr(self, n) for n, _ in self._fields_ if n not in ["reserved"] and "rsrv" not in n}
+        fields["layout_table"] = list(self.layout_table)[0 : self.layout_entry_num]
+        fields["td_template"] = self.td_template.to_dict()
+        s = ui.log_format.format_fields(fields)
 
         return s
 

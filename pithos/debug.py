@@ -11,10 +11,10 @@ from utilities.angr_helper import get_memory_value, get_reg_value
 
 logger = logging.getLogger(__name__)
 
-debug_shortname = 'dbg'
+debug_shortname = "dbg"
+
 
 class DebugPlugin(BasePlugin):
-
     def init_globals(self):
         global debug_shortname
         debug_shortname = self.shortname
@@ -25,76 +25,96 @@ class DebugPlugin(BasePlugin):
 
     @staticmethod
     def get_help_text():
-        return 'Debug plugin.'
+        return "Debug plugin."
 
     def init_angr_breakpoints(self, init_state):
-        #init_state.inspect.b('constraints', when=angr.BP_BEFORE, action=constraints_hook)
-        #init_state.inspect.b('address_concretization', when=angr.BP_AFTER, action=concretization_hook)
+        # init_state.inspect.b('constraints', when=angr.BP_BEFORE, action=constraints_hook)
+        # init_state.inspect.b('address_concretization', when=angr.BP_AFTER, action=concretization_hook)
         # init_state.inspect.b('exit', when=angr.BP_BEFORE, action=jmp_hook)
-        init_state.inspect.b('eexit', when=angr.BP_BEFORE, action=eexit_hook)
-        logger.debug('Debug plugin enabled')
+        init_state.inspect.b("eexit", when=angr.BP_BEFORE, action=eexit_hook)
+        logger.debug("Debug plugin enabled")
+
 
 def _prettify_state(dict, key, default=None):
     if key in dict:
-        return f'{key:#x} = {dict[key]}'
+        return f"{key:#x} = {dict[key]}"
     elif default:
         return default
     return hex(key)
 
+
 eexit_count = 0
+
+
 def eexit_hook(state: angr.sim_state.SimState):
     """
     Dump the g_global_data struct if it appears and Intel SDK binary.
     """
     extra_sec = None
-    global_data_pt = SymbolManager().symbol_to_addr('g_global_data')
+    global_data_pt = SymbolManager().symbol_to_addr("g_global_data")
     if global_data_pt is not None:
-        #NOTE: this is for now hardcoded to v2.19, but could also be retrieved via the SymbolManager (`SGX_TRTS_VERSION_` or so)
+        # NOTE: this is for now hardcoded to v2.19, but could also be retrieved via the SymbolManager (`SGX_TRTS_VERSION_` or so)
         global_data_type = create_versioned_struct(GlobalData, 2, 19)
         global_data = load_struct_from_memory(state, global_data_pt, global_data_type)
 
-        enclave_state_pt = SymbolManager().symbol_to_addr('g_enclave_state')
-        enclave_state = int.from_bytes(get_memory_value(state, enclave_state_pt, 4), 'little')
-        enclave_state = _prettify_state( {
-            0x0: 'ENCLAVE_INIT_NOT_STARTED',
-            0x1: 'ENCLAVE_INIT_IN_PROGRESS',
-            0x2: 'ENCLAVE_INIT_DONE',
-            0x3: 'ENCLAVE_CRASHED',
-        }, enclave_state)
+        enclave_state_pt = SymbolManager().symbol_to_addr("g_enclave_state")
+        enclave_state = int.from_bytes(get_memory_value(state, enclave_state_pt, 4), "little")
+        enclave_state = _prettify_state(
+            {
+                0x0: "ENCLAVE_INIT_NOT_STARTED",
+                0x1: "ENCLAVE_INIT_IN_PROGRESS",
+                0x2: "ENCLAVE_INIT_DONE",
+                0x3: "ENCLAVE_CRASHED",
+            },
+            enclave_state,
+        )
 
-        rv = get_reg_value(state, 'rsi')
-        rv = _prettify_state( {
-            0x0: 'SGX_SUCCESS',
-            0x1: 'SGX_ERROR_UNEXPECTED',
-            0x1006: 'SGX_ENCLAVE_CRASHED',
-        }, rv)
+        rv = get_reg_value(state, "rsi")
+        rv = _prettify_state(
+            {
+                0x0: "SGX_SUCCESS",
+                0x1: "SGX_ERROR_UNEXPECTED",
+                0x1006: "SGX_ENCLAVE_CRASHED",
+            },
+            rv,
+        )
 
-        reason = get_reg_value(state, 'rdi')
-        reason = _prettify_state( {
-            0xffffffffffffffff: 'OCMD_ERET',
-        }, reason, default=f'ECMD_OCALL nb #{reason:#x}')
+        reason = get_reg_value(state, "rdi")
+        reason = _prettify_state(
+            {
+                0xFFFFFFFFFFFFFFFF: "OCMD_ERET",
+            },
+            reason,
+            default=f"ECMD_OCALL nb #{reason:#x}",
+        )
 
-        extra_sec = {'Intel SDK-specific info': [
-                    ('', {
-                        'g_enclave_state': enclave_state,
-                        'EEXIT reason': reason,
-                        'EENTER return value': rv,
-                    },'table'),
-                    ('Enclave global data', str(global_data), 'verbatim'),
-                    ]}
+        extra_sec = {
+            "Intel SDK-specific info": [
+                (
+                    "",
+                    {
+                        "g_enclave_state": enclave_state,
+                        "EEXIT reason": reason,
+                        "EENTER return value": rv,
+                    },
+                    "table",
+                ),
+                ("Enclave global data", str(global_data), "verbatim"),
+            ]
+        }
 
     """
     Debug report every state that eexits. Make them unique by giving each an individual ID on the info
     """
     global eexit_count, debug_shortname
     Reporter().report(
-        f'State {eexit_count} eexited',
+        f"State {eexit_count} eexited",
         state,
         logger,
         debug_shortname,
         logging.INFO,
-        #extra_info={'symbol table': SymbolManager().symbol_table},
-        extra_sections=extra_sec
+        # extra_info={'symbol table': SymbolManager().symbol_table},
+        extra_sections=extra_sec,
     )
 
     eexit_count += 1
@@ -102,15 +122,16 @@ def eexit_hook(state: angr.sim_state.SimState):
 
 def jmp_hook(state: angr.sim_state.SimState):
     ip = state.scratch.ins_addr
-    logger.info(f'Jump hook: {str(state.inspect.exit_target)} @{ip}')
+    logger.info(f"Jump hook: {str(state.inspect.exit_target)} @{ip}")
+
 
 def constraints_hook(state: angr.sim_state.SimState):
     constraints = state.inspect.added_constraints
 
     # Break whenever a constraint is added and print the constraint
-    ip = get_reg_value(state, 'ip')
+    ip = get_reg_value(state, "ip")
     # sym = state.project.loader.find_symbol(ip, fuzzy=True)
-    logger.info(f'Constraints hook: {str(constraints)} @{ip}')
+    logger.info(f"Constraints hook: {str(constraints)} @{ip}")
     # state.block().pp() # Do not use this, for some weird reason it breaks stuff?
 
 
@@ -136,11 +157,13 @@ def concretization_hook(state):
 
     # TODO perhaps strategy to concretize as close as possible to the enclave range?!
     if type(res) is list:
-        res_str = ','.join([f"{r:#x}" for r in res])
-        logger.info(f'concretizing {op} @{ip} from {addr} to [{res_str}] with extra constraints {con}')
+        res_str = ",".join([f"{r:#x}" for r in res])
+        logger.info(f"concretizing {op} @{ip} from {addr} to [{res_str}] with extra constraints {con}")
     else:
-        logger.info(f'concretizing {op} @{ip} from {addr} to {res} with extra constraints {con}')
-    logger.info(f'strategy {stra}')
+        logger.info(f"concretizing {op} @{ip} from {addr} to {res} with extra constraints {con}")
+    logger.info(f"strategy {stra}")
+
+
 #   if res is None and not state.solver.satisfiable():
 #       logger.critical(f'hooking unsat {op} address concretization')
 #       s = state.project.factory.blank_state()

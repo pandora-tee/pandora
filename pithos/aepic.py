@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Global variables used by the hooks. Initialized in PointerSanitizationPlugin
 taint_action = UserAction.NONE
-plugin_shortname = 'aepic'
+plugin_shortname = "aepic"
 
 
 class AepicPlugin(BasePlugin):
@@ -57,11 +57,11 @@ class AepicPlugin(BasePlugin):
 
     @staticmethod
     def get_help_text():
-        return 'Validates MMIO buffer leaks when interacting with untrusted memory.'
+        return "Validates MMIO buffer leaks when interacting with untrusted memory."
 
     @staticmethod
     def supports_arch(angr_arch):
-        return angr_arch == 'x86_64'
+        return angr_arch == "x86_64"
 
     def init_globals(self):
         global taint_action, plugin_shortname
@@ -69,10 +69,11 @@ class AepicPlugin(BasePlugin):
         plugin_shortname = self.shortname
 
     def init_angr_breakpoints(self, init_state):
-        init_state.inspect.b('untrusted_mem_read', when=angr.BP_BEFORE, action=check_aepic_read)
-        init_state.inspect.b('inside_or_outside_mem_read', when=angr.BP_BEFORE, action=check_aepic_read)
-        init_state.inspect.b('untrusted_mem_write', when=angr.BP_BEFORE, action=check_aepic_write)
-        init_state.inspect.b('inside_or_outside_mem_write', when=angr.BP_BEFORE, action=check_aepic_write)
+        init_state.inspect.b("untrusted_mem_read", when=angr.BP_BEFORE, action=check_aepic_read)
+        init_state.inspect.b("inside_or_outside_mem_read", when=angr.BP_BEFORE, action=check_aepic_read)
+        init_state.inspect.b("untrusted_mem_write", when=angr.BP_BEFORE, action=check_aepic_write)
+        init_state.inspect.b("inside_or_outside_mem_write", when=angr.BP_BEFORE, action=check_aepic_write)
+
 
 def check_aepic_read(state):
     """
@@ -84,28 +85,28 @@ def check_aepic_read(state):
     if type(addr) is int:
         addr = BVV(addr, length)
 
-    logger.debug(f'AEPIC hook: Read from {addr} for {length}')
+    logger.debug(f"AEPIC hook: Read from {addr} for {length}")
     if type(length) is not int and length.symbolic:
         # fully ignore symbolic lengths for now
-        logger.cricial(f'AEPIC: Ignoring  read with symbolic length {length}; this should never happen in angr')
+        logger.cricial(f"AEPIC: Ignoring  read with symbolic length {length}; this should never happen in angr")
         return
 
     concrete_length = concretize_value_or_fail(state, length)
 
-    if state.solver.satisfiable(extra_constraints=[addr[2:0] != BVV(0, 3)]) or concrete_length not in [1,2,4,8]:
-        info = f'SBDR read from untrusted memory with length {concrete_length}'
+    if state.solver.satisfiable(extra_constraints=[addr[2:0] != BVV(0, 3)]) or concrete_length not in [1, 2, 4, 8]:
+        info = f"SBDR read from untrusted memory with length {concrete_length}"
         severity = logging.CRITICAL
 
         extra = {
-            'Address': addr,
-            'Length': length,
-            'Concretized length' : concrete_length,
+            "Address": addr,
+            "Length": length,
+            "Concretized length": concrete_length,
         }
 
         Reporter().report(info, state, logger, plugin_shortname, severity, extra)
 
     else:
-        logger.debug('Properly aligned read from untrusted memory.')
+        logger.debug("Properly aligned read from untrusted memory.")
 
 
 def check_aepic_write(state):
@@ -120,7 +121,7 @@ def check_aepic_write(state):
     length = state.inspect.mem_write_length
     data = state.inspect.mem_write_expr
 
-    logger.debug(f'AEPIC hook: write to {addr} for {length} with {data}')
+    logger.debug(f"AEPIC hook: write to {addr} for {length} with {data}")
 
     if type(addr) is int:
         addr = BVV(addr, length)
@@ -131,22 +132,15 @@ def check_aepic_write(state):
 
     if type(length) is not int and length.symbolic:
         # fully ignore symbolic lengths for now
-        logger.cricial(f'AEPIC: Ignoring  write with symbolic length {length}; this should never happen in angr')
+        logger.cricial(f"AEPIC: Ignoring  write with symbolic length {length}; this should never happen in angr")
         return
 
     concrete_length = concretize_value_or_fail(state, length)
-    if state.solver.satisfiable(extra_constraints=[addr[2:0] != BVV(0, 3)]) or concrete_length not in [8,16,32,64]:
-        info = f'DRPW write to untrusted memory with length {concrete_length}'
+    if state.solver.satisfiable(extra_constraints=[addr[2:0] != BVV(0, 3)]) or concrete_length not in [8, 16, 32, 64]:
+        info = f"DRPW write to untrusted memory with length {concrete_length}"
         severity = logging.CRITICAL
 
-        extra = {
-            'Address': addr,
-            'Length': length,
-            'Concretized length' : concrete_length,
-            'Data' : str(data),
-            'Touches enclave' : buffer_touches_enclave(state, addr, length),
-            'Entirely inside enclave': buffer_entirely_inside_enclave(state, addr, length)
-        }
+        extra = {"Address": addr, "Length": length, "Concretized length": concrete_length, "Data": str(data), "Touches enclave": buffer_touches_enclave(state, addr, length), "Entirely inside enclave": buffer_entirely_inside_enclave(state, addr, length)}
 
         """
         There is an exception to the above issue: Instruction is
@@ -171,31 +165,29 @@ def check_aepic_write(state):
 
             # NOTE: verw is not supported by angr, so we have to hook it and
             # keep track in the state.globals if it has been executed.
-            prev_ins = state.globals['prev_skipped_inst']
+            prev_ins = state.globals["prev_skipped_inst"]
             if prev_ins:
-                opcode = prev_ins['opcode']
-                opstr = prev_ins['opstr']
-                addr = prev_ins['addr']
-                size = prev_ins['len']
+                opcode = prev_ins["opcode"]
+                opstr = prev_ins["opstr"]
+                addr = prev_ins["addr"]
+                size = prev_ins["len"]
 
                 # Any instruction hooked by angr will be in its own basic
                 # block, so we simply check here if it's directly preceding the
                 # current basic block.
-                if opcode == 'verw' and (addr + size) == bb_addr:
+                if opcode == "verw" and (addr + size) == bb_addr:
                     prev_okay = True
-                    extra['VERW'] = f'preceding {opcode} {opstr} instruction executed at {addr:#x}'
+                    extra["VERW"] = f"preceding {opcode} {opstr} instruction executed at {addr:#x}"
                     if ins_index != 0:
-                        warn = f'verw not directly preceding {ins.mnemonic} ' + \
-                               f'(instruction {ins_index+1} in basic block at {bb_addr:#x})'
+                        warn = f"verw not directly preceding {ins.mnemonic} " + f"(instruction {ins_index + 1} in basic block at {bb_addr:#x})"
                         logger.warning(warn)
-                        extra['VERW warning'] = warn
+                        extra["VERW warning"] = warn
 
             if ins_index < blck.instructions - 2:
                 # This block also contains the next 2 instructions:
                 next_inst = blck.disassembly.insns[ins_index + 1]
                 next_next_inst = blck.disassembly.insns[ins_index + 2]
-                if (next_inst.mnemonic == 'lfence' and next_next_inst.mnemonic == 'mfence') or \
-                   (next_inst.mnemonic == 'mfence' and next_next_inst.mnemonic == 'lfence'):
+                if (next_inst.mnemonic == "lfence" and next_next_inst.mnemonic == "mfence") or (next_inst.mnemonic == "mfence" and next_next_inst.mnemonic == "lfence"):
                     next_okay = True
 
         if prev_okay and next_okay:

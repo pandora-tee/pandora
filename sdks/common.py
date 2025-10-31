@@ -8,40 +8,39 @@ import ui.log_format
 
 logger = logging.getLogger(__name__)
 
+
 def create_versioned_struct(versioned_type, version_major, version_minor):
     fields = []
     added_names = []
-    for (major_from, minor_from, name, ctype) in versioned_type._fields_versioned_:
+    for major_from, minor_from, name, ctype in versioned_type._fields_versioned_:
         # note: in case of revised fields, specify newest revision first
         # -> any older ones with the same  name will not be added
         if version_major >= major_from and version_minor >= minor_from and name not in added_names:
             # recursively apply versioning to any contained subtypes
-            if hasattr(ctype,'_fields_versioned_'):
+            if hasattr(ctype, "_fields_versioned_"):
                 ctype = create_versioned_struct(ctype, version_major, version_minor)
-            fields.append((name,ctype))
+            fields.append((name, ctype))
             added_names.append(name)
 
     # create and return the versioned type class dynamically
-    t = type(f'{versioned_type.__name__}v{version_major}{version_minor}',
-            (ctypes.LittleEndianStructure, ), {
-            '_fields_' : fields,
-            '__str__'  : versioned_type.__str__,
-            'to_dict'  : versioned_type.to_dict
-    })
+    t = type(f"{versioned_type.__name__}v{version_major}{version_minor}", (ctypes.LittleEndianStructure,), {"_fields_": fields, "__str__": versioned_type.__str__, "to_dict": versioned_type.to_dict})
 
-    logger.debug(f'Dynamically created {t.__name__} struct with {len(fields)} members')
+    logger.debug(f"Dynamically created {t.__name__} struct with {len(fields)} members")
     return t
+
 
 def write_struct_to_memory(state, addr, struct, with_enclave_boundaries=False):
     # logger.debug(f'Writing struct {str(type(struct))} to addr {addr:#x}. Struct bytes are {binascii.hexlify(bytes(struct))}')
     state.memory.store(addr, bytes(struct), size=ctypes.sizeof(struct), with_enclave_boundaries=with_enclave_boundaries)
 
+
 def write_bvv_to_memory(state, addr, bvv_str, bits):
     bvv = claripy.BVV(bvv_str, bits)
     enclave_file_base = state.project.loader.main_object.mapped_base
     addr = enclave_file_base + addr
-    logger.debug(f'Writing BVV {bvv} to addr {addr:#x}.')
+    logger.debug(f"Writing BVV {bvv} to addr {addr:#x}.")
     state.memory.store(addr, bvv, endness=archinfo.Endness.LE, with_enclave_boundaries=False)
+
 
 def load_struct_from_memory(state, addr, struct_type):
     """
@@ -60,10 +59,12 @@ def load_struct_from_memory(state, addr, struct_type):
     struct = struct_type.from_buffer_copy(struct_bytes)
     return struct
 
+
 ################################################################################
 # Architectural SGX structure definitions.
 # --> stable across SDKs, as defined in the SGX ISA).
 ################################################################################
+
 
 class Tcs(ctypes.LittleEndianStructure):
     """
@@ -84,6 +85,7 @@ class Tcs(ctypes.LittleEndianStructure):
         uint8_t             reserved[TCS_RESERVED_LENGTH];  /* (72) */
     }tcs_t;
     """
+
     _fields_ = [
         ("reserved0", ctypes.c_uint64),
         ("flags", ctypes.c_uint64),
@@ -100,8 +102,7 @@ class Tcs(ctypes.LittleEndianStructure):
     ]
 
     def __str__(self):
-        fields = {n: getattr(self, n) for n, _ in self._fields_
-                  if n not in ['reserved', 'reserved0', 'reserved1']}
+        fields = {n: getattr(self, n) for n, _ in self._fields_ if n not in ["reserved", "reserved0", "reserved1"]}
         return ui.log_format.format_fields(fields)
 
 
@@ -115,13 +116,14 @@ class SgxAttributes(ctypes.LittleEndianStructure):
         uint64_t      xfrm;
     } sgx_attributes_t;
     """
+
     _fields_ = [
-        ('flags', ctypes.c_uint64),
-        ('xfrm', ctypes.c_uint64),
+        ("flags", ctypes.c_uint64),
+        ("xfrm", ctypes.c_uint64),
     ]
 
     def __repr__(self):
-        return 'Attributes with flags {0} and xfrm {1}'.format(self.flags, self.xfrm)
+        return "Attributes with flags {0} and xfrm {1}".format(self.flags, self.xfrm)
 
 
 class Secs(ctypes.LittleEndianStructure):
@@ -150,7 +152,8 @@ class Secs(ctypes.LittleEndianStructure):
     #define SECS_RESERVED4_LENGTH 3834
         uint8_t                     reserved4[SECS_RESERVED4_LENGTH];/* (262) reserved */
     } secs_t;
-"""
+    """
+
     _fields_ = [
         ("size", ctypes.c_uint64),
         ("base", ctypes.c_uint64),
@@ -173,8 +176,7 @@ class Secs(ctypes.LittleEndianStructure):
     ]
 
     def __str__(self):
-        fields = {n: getattr(self, n) for n, _ in self._fields_
-                  if 'reserved' not in n}
+        fields = {n: getattr(self, n) for n, _ in self._fields_ if "reserved" not in n}
         return ui.log_format.format_fields(fields)
 
 
@@ -206,7 +208,8 @@ class SgxReport(ctypes.LittleEndianStructure):
         sgx_key_id_t            key_id;         /* (384) KeyID used for diversifying the key tree */
         sgx_mac_t               mac;            /* (416) The Message Authentication Code over this structure. */
     } sgx_report_t;
-"""
+    """
+
     _fields_ = [
         ("cpu_svn", ctypes.c_uint8 * 16),
         ("misc_select", ctypes.c_uint32),
@@ -230,8 +233,7 @@ class SgxReport(ctypes.LittleEndianStructure):
     ]
 
     def __str__(self):
-        fields = {n: getattr(self, n) for n, _ in self._fields_
-                  if 'reserved' not in n}
+        fields = {n: getattr(self, n) for n, _ in self._fields_ if "reserved" not in n}
         return ui.log_format.format_fields(fields)
 
 
@@ -296,6 +298,5 @@ class SgxSsaGpr(ctypes.LittleEndianStructure):
     ]
 
     def __str__(self):
-        fields = {n: getattr(self, n) for n, _ in self._fields_
-                  if 'reserved' not in n}
+        fields = {n: getattr(self, n) for n, _ in self._fields_ if "reserved" not in n}
         return ui.log_format.format_fields(fields)

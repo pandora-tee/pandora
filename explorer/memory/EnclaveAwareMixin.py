@@ -9,38 +9,36 @@ from explorer.taint import get_tainted_mem_bits
 
 logger = logging.getLogger(__name__)
 
-class EnclaveAwareMixin(MemoryMixin):
 
+class EnclaveAwareMixin(MemoryMixin):
     def store(self, addr, data, with_enclave_boundaries=True, size=None, **kwargs):
-        breakpoint_event = ''
+        breakpoint_event = ""
 
         if size is None:
             size = len(data)
 
         # Only enable the mixin if store is called with_enclave_boundaries (default on)
-        mixin_enabled = self.category == 'mem' \
-                        and with_enclave_boundaries \
-                        and po.PandoraOptions().get_option(po.PANDORA_ENCLAVE_MIXIN_ENABLE)
+        mixin_enabled = self.category == "mem" and with_enclave_boundaries and po.PandoraOptions().get_option(po.PANDORA_ENCLAVE_MIXIN_ENABLE)
 
         if mixin_enabled:
             if buffer_entirely_inside_enclave(self.state, addr, size):
                 """
                 Case: Store on buffer that fully lies inside the enclave
                 """
-                breakpoint_event = 'trusted_mem_write'
+                breakpoint_event = "trusted_mem_write"
 
             elif buffer_touches_enclave(self.state, addr, size):
                 """
                 Case: Store on Buffer that can lie outside OR inside the enclave
                 """
                 # --> Trigger touches breakpoint
-                breakpoint_event = 'inside_or_outside_mem_write'
+                breakpoint_event = "inside_or_outside_mem_write"
 
             else:
                 """
                 Case: Store on fully untrusted buffer
                 """
-                breakpoint_event = 'untrusted_mem_write'
+                breakpoint_event = "untrusted_mem_write"
 
             self.state._inspect(
                 breakpoint_event,
@@ -50,7 +48,7 @@ class EnclaveAwareMixin(MemoryMixin):
                 mem_write_expr=data,
             )
 
-            if breakpoint_event != 'trusted_mem_write':
+            if breakpoint_event != "trusted_mem_write":
                 """
                 Addresses that are not FULLY in enclave range: Ignore the store
                 This is the conservative approach to simulating enclave memory:
@@ -62,7 +60,7 @@ class EnclaveAwareMixin(MemoryMixin):
                 This also impacts partial buffers that may lie outside OR inside. These are also ignored for stores and
                   the ptrsan plugin needs to make sure we report it properly as a security issue.
                 """
-                logger.debug(f'Ignoring untrusted {self.category} store @ {addr}.')
+                logger.debug(f"Ignoring untrusted {self.category} store @ {addr}.")
 
                 # The post load breakpoint does not make too much sense here, but we trigger it still
                 #   as to not break the developers expectations
@@ -92,36 +90,28 @@ class EnclaveAwareMixin(MemoryMixin):
         return r
 
     def load(self, addr, size=None, with_enclave_boundaries=True, **kwargs):
-        breakpoint_event = ''
-
+        breakpoint_event = ""
 
         # Only enable the mixin if load is called with_enclave_boundaries (default on)
         # For enclave memory, we only care about memory loads
-        mixin_enabled = with_enclave_boundaries \
-                        and po.PandoraOptions().get_option(po.PANDORA_ENCLAVE_MIXIN_ENABLE) \
-                        and self.category == 'mem'
+        mixin_enabled = with_enclave_boundaries and po.PandoraOptions().get_option(po.PANDORA_ENCLAVE_MIXIN_ENABLE) and self.category == "mem"
 
-        if mixin_enabled :
+        if mixin_enabled:
             if buffer_entirely_inside_enclave(self.state, addr, size):
-                logger.log(logging.TRACE, f'Reading enclave memory @{addr} size {size}')
-                breakpoint_event = 'trusted_mem_read'
+                logger.log(logging.TRACE, f"Reading enclave memory @{addr} size {size}")
+                breakpoint_event = "trusted_mem_read"
 
             else:
                 if buffer_touches_enclave(self.state, addr, size):
-                    breakpoint_event = 'inside_or_outside_mem_read'
+                    breakpoint_event = "inside_or_outside_mem_read"
                 else:
                     # Addr is NOT in enclave range
-                    breakpoint_event = 'untrusted_mem_read'
+                    breakpoint_event = "untrusted_mem_read"
 
             # Trigger read BEFORE breakpoint
-            self.state._inspect(
-                breakpoint_event,
-                BP_BEFORE,
-                mem_read_address=addr,
-                mem_read_length=size
-            )
+            self.state._inspect(breakpoint_event, BP_BEFORE, mem_read_address=addr, mem_read_length=size)
 
-            if breakpoint_event != 'trusted_mem_read':
+            if breakpoint_event != "trusted_mem_read":
                 """
                  Note: this else case is triggered:
                   1. when the load touches partly the enclave (i.e. half of the load is outside and half is inside), or
@@ -132,7 +122,7 @@ class EnclaveAwareMixin(MemoryMixin):
                   breakpoint before returning.
                 """
                 mem = get_tainted_mem_bits(self.state, size * 8)
-                logger.debug(f'Simulating untrusted {self.category} load @ {addr} with a tainted BVS {mem}.')
+                logger.debug(f"Simulating untrusted {self.category} load @ {addr} with a tainted BVS {mem}.")
 
                 # The post load breakpoint does not make too much sense here, but we trigger it still
                 #   as to not break the developers expectations

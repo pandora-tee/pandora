@@ -10,15 +10,15 @@ from angr.engines import (
 
 
 class PandoraEngine(
-        SimEngineFailure,
-        SimEngineSyscall,
-        HooksMixin,
-        # SimEngineUnicorn, # We do not use unicorn
-        # SuperFastpathMixin,  # We probably don't need that?
-        TrackActionsMixin,
-        SimInspectMixin,
-        HeavyResilienceMixin,
-        # SootMixin, # For Java
-        HeavyVEXMixin,
+    SimEngineFailure,
+    SimEngineSyscall,
+    HooksMixin,
+    # SimEngineUnicorn, # We do not use unicorn
+    # SuperFastpathMixin,  # We probably don't need that?
+    TrackActionsMixin,
+    SimInspectMixin,
+    HeavyResilienceMixin,
+    # SootMixin, # For Java
+    HeavyVEXMixin,
 ):
     pass
