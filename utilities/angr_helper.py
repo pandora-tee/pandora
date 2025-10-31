@@ -1,5 +1,6 @@
 import logging
 
+import angr
 import archinfo
 import claripy
 
@@ -70,7 +71,8 @@ def concretize_value_or_none(state, value):
     """
     try:
         concrete_val = concretize_value_or_fail(state, value)
-    except:
+    except (angr.errors.SimUnsatError, angr.errors.SimValueError):
+        # No solution or multiple solutions found
         concrete_val = None
 
     return concrete_val
@@ -99,7 +101,8 @@ def get_reg_value(state, reg_name, disable_actions=True, inspect=False):
     reg_sym = get_sym_reg_value(state, reg_name, disable_actions, inspect)
     try:
         reg = state.solver.eval_one(reg_sym)
-    except:
+    except (angr.errors.SimUnsatError, angr.errors.SimValueError):
+        # No solution or multiple solutions found
         reg = reg_sym
     return reg
 

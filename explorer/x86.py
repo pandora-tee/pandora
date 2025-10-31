@@ -108,7 +108,7 @@ class SimLdmxcsr(SimProcedure):
         try:
             mxcsr = get_memory_value(self.state, source_addr, 2, with_enclave_boundaries=True)
             mxcsr = get_int_from_bytes(mxcsr, 0, 2)
-        except:
+        except (angr.errors.SimUnsatError, angr.errors.SimValueError):
             mxcsr = get_sym_memory_value(self.state, source_addr, 2, with_enclave_boundaries=True)
             logger.critical(f"LDMXCSR: symbolic MXCSR={mxcsr} not supported; continuing with default MXCSR=0x3f80..")
             mxcsr = 0x3F80

@@ -211,7 +211,7 @@ def break_abi_to_api(state):
                     mxcsr_val = state.solver.eval_one(mxcsr)
                     do_report = mxcsr_val != 0x1FBF
                     mxcsr = hex(mxcsr_val)
-                except:
+                except (angr.errors.SimUnsatError, angr.errors.SimValueError):
                     do_report = True
 
             # If MXCSR already wants to do a report, this is a critical issue

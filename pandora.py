@@ -19,6 +19,7 @@ from rich.progress import (
     Progress,
     ProgressColumn,
     SpinnerColumn,
+    Task,
     TaskProgressColumn,
     TextColumn,
     TimeElapsedColumn,
