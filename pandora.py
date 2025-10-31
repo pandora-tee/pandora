@@ -147,7 +147,7 @@ def pandora_setup(pandora_ctx: PandoraContext, binary_path: Path):
         reporter = ui.report.Reporter(binary_path, sdk_mgr.get_sdk_name(), pandora_ctx.report_level)
 
         # Init requested plugins
-        plugin_mgr = PluginManager(init_state, pandora_ctx.plugins, action_mgr.actions, reporter)
+        PluginManager(init_state, pandora_ctx.plugins, action_mgr.actions, reporter)
 
         # Give SDKs one last chance to modify the init state
         sdk_mgr.prepare_init_state(init_state)

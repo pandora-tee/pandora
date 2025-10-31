@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 
-import angr
+from angr import SimProcedure
 from capstone import CS_ARCH_X86, CS_MODE_64, Cs
 
 import ui.log_format
@@ -14,7 +14,6 @@ from explorer.sancus_hooks import (
     SimEncrypt,
     SimGetCallerID,
     SimGetID,
-    SimNop,
     SimProtect,
     SimUnprotect,
 )
@@ -28,7 +27,6 @@ from explorer.x86 import (
     SimMemcmp,
     SimMemcpy,
     SimMemset,
-    SimNop,
     SimRep,
     SimRet,
     SimVzeroall,
@@ -36,6 +34,17 @@ from explorer.x86 import (
 from sdks.SymbolManager import SymbolManager
 
 logger = logging.getLogger(__name__)
+
+
+class SimNop(SimProcedure):
+    IS_FUNCTION = False
+    NEEDS_ENDBR = False
+
+    def run(self, opstr="", bytes_to_skip=3, mnemonic="", **kwargs):
+        logger.info(f"skipping over {bytes_to_skip}-byte instruction {ui.log_format.format_inline_header(f'{mnemonic} {opstr}')} at {self.state.addr:#x}")
+        self.state.globals["prev_skipped_inst"] = {"opcode": mnemonic, "addr": self.state.addr, "len": bytes_to_skip, "opstr": opstr}
+
+        self.jump(self.state.addr + bytes_to_skip)
 
 
 class AbstractHooker:
@@ -180,7 +189,7 @@ class SGXHooker(AbstractHooker):
         # rep is handled by SimRep but is  checked for partial and not complete equality below.
     }
 
-    def instruction_replacement(self, capstone_instruction) -> angr.SimProcedure | None:
+    def instruction_replacement(self, capstone_instruction) -> SimProcedure | None:
         """
         Replaces a capstone instruction with a SimProcedure or returns None if no replacement is necessary.
         :param capstone_instruction: Instruction as returned by the disassembler

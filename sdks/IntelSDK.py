@@ -7,6 +7,7 @@ import claripy
 import elftools.elf.sections
 
 import ui
+from sdks.AbstractSDK import AbstractSDK
 from sdks.AbstractSGXSDK import AbstractSGXSDK
 from sdks.common import (
     Tcs,

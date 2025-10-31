@@ -24,7 +24,7 @@ def get_current_opcode(state):
         ins_index = blck.instruction_addrs.index(scratch_ip)
         ins = blck.disassembly.insns[ins_index]
         return ins.mnemonic
-    except:
+    except Exception:
         return ""
 
 

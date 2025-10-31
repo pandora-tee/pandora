@@ -407,17 +407,6 @@ class SimAbort(SimProcedure):
         self.exit(-1)
 
 
-class SimNop(SimProcedure):
-    IS_FUNCTION = False
-    NEEDS_ENDBR = False
-
-    def run(self, opstr="", bytes_to_skip=3, mnemonic="", **kwargs):
-        logger.info(f"skipping over {bytes_to_skip}-byte instruction {ui.log_format.format_inline_header(f'{mnemonic} {opstr}')} at {self.state.addr:#x}")
-        self.state.globals["prev_skipped_inst"] = {"opcode": mnemonic, "addr": self.state.addr, "len": bytes_to_skip, "opstr": opstr}
-
-        self.jump(self.state.addr + bytes_to_skip)
-
-
 class SimMemcpy(SimProcedure):
     IS_FUNCTION = False
     NEEDS_ENDBR = True
@@ -502,7 +491,6 @@ def _enclave_handle_memset(state, dst, val, size):
         memset = SIM_PROCEDURES["libc"]["memset"]
         # Memset expects val to be a BV of size 8 so cast it into a BVV
         memset().execute(state, arguments=[dst, claripy.BVV(val, 8), size])
-        self.ret(dst)
 
 
 class SimMemset(SimProcedure):

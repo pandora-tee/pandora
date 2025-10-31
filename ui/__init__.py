@@ -5,11 +5,11 @@ from pathlib import Path
 
 from rich.console import Console
 
-console = Console(color_system=None, highlight=False, soft_wrap=True)
-
 # Before importing angr, start a spinner to show progress.
 from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
+console = Console(color_system=None, highlight=False, soft_wrap=True)
 
 """
 At creation time of Pandora, we once import the whole of angr to get all its loggers and be able to disable them
@@ -30,7 +30,7 @@ with Live(p, console=console) as progress:
     p.advance(task)
 
     # Angr import is important: at call time of the log setup, angr was not included yet, but we want to track its loggers.
-    import angr
+    import angr  # noqa: F401,I001
 
     p.update(task, total=1.0, completed=1.0)
     # p.remove_task(task)
