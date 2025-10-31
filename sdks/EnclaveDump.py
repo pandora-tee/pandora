@@ -32,7 +32,7 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
         Parse the json and split it into the following parts:
          - SECS and SECS_PAGES
            We do not really need SECS PAGES because we only care about the value of the SECS structure, not its location.
-        - TCS and TCS_PAGES 
+        - TCS and TCS_PAGES
            Make this into a list of tuples [dict(tcs struct), dict(tcs page)]
         - PAGES
            All remaining pages that are not any of the above
@@ -84,7 +84,7 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
         Now, we utilize the parsed data from above:
         1. Read enclave size and base addr from SECS struct
         2. Choose a TCS and get TCS address from the according Page
-           Perform a double check by reading its content and comparing with the one in the dumpfile 
+           Perform a double check by reading its content and comparing with the one in the dumpfile
         """
 
         # First, get enclave size and base addr from SECS

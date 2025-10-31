@@ -63,7 +63,7 @@ def get_enclave_range():
 
 """
 To speed things up, wrap the rest of the function in an inner function that utilizes lru_caching
-Unfortunately, states are not always hashable (sometimes they are weak proxies). This is why we 
+Unfortunately, states are not always hashable (sometimes they are weak proxies). This is why we
 restrict the caching to addr and length plus the enclave range.
 """
 @lru_cache(maxsize=256, typed=False)
@@ -164,7 +164,7 @@ def _check_entirely_inside(addr, length, enclave_min_addr, enclave_max_addr, sol
 
     """
     We can abort immediately if the length of the buffer is larger than the size of the enclave.
-    These buffers can never fully lie inside the enclave. 
+    These buffers can never fully lie inside the enclave.
     """
     if enclave_min_addr >= max_allowed_addr_inside_enclave:
         return False

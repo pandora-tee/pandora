@@ -149,7 +149,7 @@ class SimFxrstor(SimProcedure):
             Instead, we focus on the essentials here:
              - Legacy XSAVE data: First 512 bytes that contain FPU/SSE register states.
              (see Section 13.4.1, “Legacy Region of an XSAVE Area” of Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1)
-             - XSAVE Header: 64 bytes following the legacy data. Containing: 
+             - XSAVE Header: 64 bytes following the legacy data. Containing:
              (see Section 13.4.2, “XSAVE Header” of Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1)
                - XSTATE_BV ( bytes 0:7 ) : Sets the feature set used in the XSAVE data
              (see Section 13.1, “XSAVE Supported Features” of Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1)
@@ -163,10 +163,10 @@ class SimFxrstor(SimProcedure):
             """
             First parse XSAVE header
             NOTE: XSTATE_BV is a bit vector (bits 0=x87; 1=sse; 2=avx; 4:3=mpx; 7:5=avx512; etc).
-            When bit i is set, component i is loaded from memory; 
-            else, component i is restored to the defaults of Section 13.6, “Processor tracking of XSAVE Managed State” 
+            When bit i is set, component i is loaded from memory;
+            else, component i is restored to the defaults of Section 13.6, “Processor tracking of XSAVE Managed State”
                of Intel® 64 and IA-32 Architectures Software Developer’s Manual, Volume 1
-            
+
             NOTE: We ignore XCOMP_BV[62:0] as this does only apply to the extended region of the XSAVE area and angr does not
              support any registers stored there anyway
             """

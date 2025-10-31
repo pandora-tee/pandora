@@ -56,9 +56,9 @@ class EnclaveAwareMixin(MemoryMixin):
                 This is the conservative approach to simulating enclave memory:
                  - Buffers fully inside the enclave are simulated normally
                  - ALL other buffers are completely symbolized and ignored
-                 Note, that the breakpoint has already triggered, so we still allow all reports of the security 
+                 Note, that the breakpoint has already triggered, so we still allow all reports of the security
                   implications of such stores. But for Pandora, we now functionality-wise symbolize this store
-                  by ignoring it. 
+                  by ignoring it.
                 This also impacts partial buffers that may lie outside OR inside. These are also ignored for stores and
                   the ptrsan plugin needs to make sure we report it properly as a security issue.
                 """
@@ -127,9 +127,9 @@ class EnclaveAwareMixin(MemoryMixin):
                  Note: this else case is triggered:
                   1. when the load touches partly the enclave (i.e. half of the load is outside and half is inside), or
                   2. when the load fully lies outside the enclave
-                 Both cases will be handled by returning a fully symbolic attacker tainted data. 
+                 Both cases will be handled by returning a fully symbolic attacker tainted data.
                  This is the conservative handling of partially untrusted loads.
-                 However, we first triggered the respective breakpoint, create the load, and then trigger the post 
+                 However, we first triggered the respective breakpoint, create the load, and then trigger the post
                   breakpoint before returning.
                 """
                 mem = get_tainted_mem_bits(self.state, size * 8)

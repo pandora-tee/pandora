@@ -93,7 +93,7 @@ class SancusSDK(AbstractSDK):
         eenter_state.inspect.b('trusted_mem_write', when=BP_AFTER, action=check_write_to_text_section)
 
 """
-Function that changes the 'written_to_text_section' variable if there will be written to the 
+Function that changes the 'written_to_text_section' variable if there will be written to the
 text section of the enclave
 """
 def check_write_to_text_section(state):

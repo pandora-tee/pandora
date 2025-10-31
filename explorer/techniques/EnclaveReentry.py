@@ -42,7 +42,7 @@ class EnclaveReentry(ExplorationTechnique):
 
         """
         After stepping, remove the eexited stash by putting all eexited states either into the new_uniques stash
-        or by dropping them if they are not unique 
+        or by dropping them if they are not unique
         """
         if self.enclave_reentry_count > 0 and len(simgr.stashes['eexited']) > 0:
             new_count = 0

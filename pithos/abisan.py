@@ -116,10 +116,10 @@ def reg_read_hook(state):
 
         """
         We can now be certain that this is an issue, a tainted data register has been read!
-        
+
         Potential Todo:
         Ideally we should skip some known false positives here (e.g., popfq and pushfq are harmless but read/write the flags..)
-        However doing so arbitrarily would mean that we disassembly the current instruction address on each register 
+        However doing so arbitrarily would mean that we disassembly the current instruction address on each register
             read which is quite expensive. So for now we leave it as-is.
         """
 
@@ -163,7 +163,7 @@ def break_abi_to_api(state):
 
         sym_name = SymbolManager().get_symbol(ip)
         """
-        Our heuristic assumes that the first call instruction is the actual api entry point. 
+        Our heuristic assumes that the first call instruction is the actual api entry point.
         While surprisingly effective, this is not true for all SDKs.
         For example the Intel SDK has as a first call a restore_xregs function.
         Until we find a smarter way of doing so, we can go a long way by double-checking that the
@@ -242,15 +242,15 @@ def break_abi_to_api(state):
                 and afterwards sanitized by the enclave. If the sanitization
                 was correct, the above call to `get_reg_value` will yield only
                 one unique concrete solution (as provided by `solver.eval_one`).
-                
-                Thus, we can simply replace the symbolic value with its only 
+
+                Thus, we can simply replace the symbolic value with its only
                 possible concrete result. This effectively forces an "eager"
                 replacement of these flag bits, so that when they are used later
                 they will not appear to be tainted by the attacker and will
                 not trigger any false positives. That is, because there is only
                 one concrete result for this symbolic expression, we are sure
-                that any attacker-controlled symbolic values in the above if 
-                expression were properly masked away by the enclave 
+                that any attacker-controlled symbolic values in the above if
+                expression were properly masked away by the enclave
                 sanitization logic.
 
                 See also <https://docs.angr.io/advanced-topics/ir#condition-flags-computation-for-x86-and-arm>

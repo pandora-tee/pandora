@@ -24,15 +24,15 @@ class OpenEnclaveSDK(AbstractSGXSDK):
 
         """
         Notes on how to set up heap,stack, and tcs pages
-        
+
         TCS is filled with:
-        
+
         Open questions
-        
+
         Arguments to add_data_pages:
         what is oeimage.elf.entry_rva ?
-        what is vaddr? 
-        
+        what is vaddr?
+
         """
 
     @staticmethod
@@ -60,7 +60,7 @@ class OpenEnclaveSDK(AbstractSGXSDK):
     https://github.com/openenclave/openenclave/blob/3fac91909f8291926182381394ec0ac2de4645e6/host/sgx/loadelf.c#L543
 
     TCS and other "control pages" are created here:
-    https://github.com/openenclave/openenclave/blob/4cc08d3fcc32d17586b34c390905b11a4f547729/host/sgx/create.c#L223 
+    https://github.com/openenclave/openenclave/blob/4cc08d3fcc32d17586b34c390905b11a4f547729/host/sgx/create.c#L223
 
     oe_sgx_build_enclave
         -> oe_load_enclave_image        -- this is what angr already does for us
@@ -73,30 +73,30 @@ class OpenEnclaveSDK(AbstractSGXSDK):
             -> _add_heap_pages
             -> _add_stack_pages
             -> _add_control_pages
-    
+
     ---
     A lot of things also happen when creating the enclave
     https://github.com/openenclave/openenclave/blob/4cc08d3fcc32d17586b34c390905b11a4f547729/host/sgx/create.c#L888
-    
+
     This file is the loader that loads an elf file into memory:
     https://github.com/openenclave/openenclave/blob/3fac91909f8291926182381394ec0ac2de4645e6/host/sgx/loadelf.c#L458
-    
+
     At its core, the following struct is filled. Values are added as comments
-    
+
     struct _oe_enclave_elf_image
 {
-    elf64_t elf; 
+    elf64_t elf;
     ---> The elf file struct. Basically contains magic, data, and size
     data is just the byte blob if the file read from path below
     magic is expected to be ELF_MAGIC 0x7d7ad33b. This is NOT equal to the Elf magic .. (which would be 7f 45 4c 46 02 01 01)
-    data is typed into a elf64_ehdr_t struct 
+    data is typed into a elf64_ehdr_t struct
 
     const char* path; /* Path of the ELF binary */
 
     char* image_base;   /* Base of the loaded segment contents */
     --> allocated in _initialize_image_segments, page aligned
     --> zero initialized
-    
+
     uint64_t image_rva; /* RVA of the loaded segment contents */
     size_t image_size;  /* Size of all loaded segment contents */
     --> calculated in _initialize_image_segments
@@ -129,7 +129,7 @@ class OpenEnclaveSDK(AbstractSGXSDK):
 
     /* RVA of the enclave entry point to set in TCS.OENTRY */
     uint64_t entry_rva;
-    ---> This field is set to the e_entry field of the elf file. readelf calls this field the Entry point address 
+    ---> This field is set to the e_entry field of the elf file. readelf calls this field the Entry point address
     and it is part of the elf header
 
     /* RVA of the .oeinfo section to read oe_sgx_enclave_properties_t
@@ -146,7 +146,7 @@ class OpenEnclaveSDK(AbstractSGXSDK):
     uint64_t dynamic_rva;
     ---> set to sh->sh_addr; of .dynamic
 };
-    
+
 struct _oe_enclave_image
 {
     oe_image_type type;
@@ -193,6 +193,6 @@ struct _oe_enclave_image
 
     oe_result_t (*unload)(oe_enclave_image_t* image);
 };
-    
-    
+
+
     """

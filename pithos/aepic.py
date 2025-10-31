@@ -19,7 +19,7 @@ plugin_shortname = 'aepic'
 class AepicPlugin(BasePlugin):
     """
     Plugin for the Aepic leak:
-    
+
     - https://aepicleak.com/aepicleak.pdf
     - https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/advisory-guidance/stale-data-read-from-xapic.html
     - https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-00657.html
@@ -44,8 +44,8 @@ class AepicPlugin(BasePlugin):
         2. done. make sure src and dst are entirely inside enclave
             2.1 yes: proceed with the simprocedure (fast path)
             2.2 no: proceed with the assembly (slow path)
-    
-    #2 for every *untrusted* memory access check:    
+
+    #2 for every *untrusted* memory access check:
         1. done reads (AEPIC, SBDR): always 8-byte aligned and size in [1,2,4,8]
         2. writes (DRPW): check either
             * 8-byte aligned and size in [8,16,32,64]; or

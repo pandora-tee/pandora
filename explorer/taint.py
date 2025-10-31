@@ -72,7 +72,7 @@ class AttackerTaintConservative(claripy.Annotation):
 
 
 """
-    Same as above, except that eliminatable is set to True (no overtainting). 
+    Same as above, except that eliminatable is set to True (no overtainting).
 """
 
 

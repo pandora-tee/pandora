@@ -91,7 +91,7 @@ def test_buffer_touches_enclave(state):
         logger.debug(f'Cache info after this test: {_check_touches.cache_info()}')
 
     """
-    First batch of states will use a simple default enclave address range from 0x1000 - (0x2000-1). 
+    First batch of states will use a simple default enclave address range from 0x1000 - (0x2000-1).
     This tests the following expectations with their descriptions:
      1. True: Buffer is fully symbolic
      Complete overlaps:
@@ -240,7 +240,7 @@ def test_buffer_entirely_inside_enclave(state):
 
 
     """
-    First batch of states will use a simple default enclave address range from 0x1000 - (0x2000-1). 
+    First batch of states will use a simple default enclave address range from 0x1000 - (0x2000-1).
     This tests the following expectations with their descriptions:
     NOTE: The cases differ SLIGHTLY to the ones above for buffer_touches_enclave (especially the partial overlaps)
      1. False: Buffer is fully symbolic

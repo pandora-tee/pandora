@@ -330,9 +330,9 @@ class ThreadData(ctypes.LittleEndianStructure):
     """
     Struct definitions of the thread local data patch (1st patch). Not used in
     sgxmetadata and auto patched, but we add it here for pretty printing.
-    
+
     https://github.com/intel/linux-sgx/blob/26c458905b72e66db7ac1feae04b43461ce1b76f/common/inc/internal/thread_data.h#L88
-    
+
     typedef struct _thread_data_t
     {
         sys_word_t  self_addr;
@@ -341,11 +341,11 @@ class ThreadData(ctypes.LittleEndianStructure):
         sys_word_t  stack_limit_addr;   /* set by urts, relative to TCS */
         sys_word_t  first_ssa_gpr;      /* set by urts, relative to TCS */
         sys_word_t  stack_guard;        /* GCC expects start_guard at 0x14 on x86 and 0x28 on x64 */
-    
+
         sys_word_t  flags;
         sys_word_t  xsave_size;         /* in bytes (se_ptrace.c needs to know its offset).*/
         sys_word_t  last_error;         /* init to be 0. Used by trts. */
-    
+
     #ifdef TD_SUPPORT_MULTI_PLATFORM
         sys_word_t  m_next;             /* next TD used by trusted thread library (of type "struct _thread_data *") */
     #else
