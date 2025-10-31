@@ -11,8 +11,18 @@ import ui
 from explorer.enclave import get_enclave_range
 from sdks.SymbolManager import SymbolManager
 from ui import log_setup, pandora_root_dir
-from ui.log_format import format_log_level, format_header, log_always, format_table, format_link, format_asm, \
-    format_regs, format_attacker_constraints, get_state_backtrace_formatted, format_inline_header
+from ui.log_format import (
+    format_asm,
+    format_attacker_constraints,
+    format_header,
+    format_inline_header,
+    format_link,
+    format_log_level,
+    format_regs,
+    format_table,
+    get_state_backtrace_formatted,
+    log_always,
+)
 from ui.log_setup import LogLevel
 from utilities.Singleton import Singleton
 
@@ -24,28 +34,30 @@ class JsonEntryId(enum.IntEnum):
     ENTRY_ID_PLUGIN = 2
     ENTRY_ID_DATA = 3
 
-SYSTEM_EVENTS_REPORT_NAME = 'system-events'
+
+SYSTEM_EVENTS_REPORT_NAME = "system-events"
+
 
 def replace_string_path_arguments(str_path, binpath, logfile_timestamp=None, force_use_logfile_timestamp=False):
     # PANDORA_DIR is the base dir of pandora
-    str_path = str_path.replace('$PANDORA_DIR$', pandora_root_dir)
+    str_path = str_path.replace("$PANDORA_DIR$", pandora_root_dir)
 
     # TIMESTAMP is current timestamp
     # In some cases, like when only reporting on an old json file, we want to always use the logfile timestamp instead
     if force_use_logfile_timestamp and logfile_timestamp is not None:
-        str_path = str_path.replace('$TIMESTAMP$', logfile_timestamp)
+        str_path = str_path.replace("$TIMESTAMP$", logfile_timestamp)
     else:
-        str_path = str_path.replace('$TIMESTAMP$', ui.start_timestamp)
+        str_path = str_path.replace("$TIMESTAMP$", ui.start_timestamp)
 
     # BINNAME is the name of the binary
-    str_path = str_path.replace('$BINNAME$', binpath.stem)
+    str_path = str_path.replace("$BINNAME$", binpath.stem)
 
     # Special folder $BINPATH$ is resolved to the folder of the binary.
-    str_path = str_path.replace('$BINPATH$', str(binpath.parents[0]))
+    str_path = str_path.replace("$BINPATH$", str(binpath.parents[0]))
 
     # $TIMESTAMP_LOG$ should be replaced by the timestamp stored in the log file
     if logfile_timestamp is not None:
-        str_path = str_path.replace('$LOG_TIMESTAMP$', logfile_timestamp)
+        str_path = str_path.replace("$LOG_TIMESTAMP$", logfile_timestamp)
 
     return str_path
 
@@ -55,9 +67,9 @@ def generate_basedir(config_name, binpath):
     Generates a basedir Path object by reading config_name from the config file and
     parsing the given config. Creates the directory if it does not exist.
     """
-    dir = ''
-    if 'Logging' in log_setup.config:
-        dir = log_setup.config['Logging'].get(config_name, dir)
+    dir = ""
+    if "Logging" in log_setup.config:
+        dir = log_setup.config["Logging"].get(config_name, dir)
 
     dir = replace_string_path_arguments(dir, binpath)
 
@@ -71,9 +83,9 @@ def generate_filename(config_name, binpath, logfile_timestamp=None, force_use_lo
     """
     Generates a filename based on the given config_name in the config file and the parsed replaced string.
     """
-    filename = '$TIMESTAMP$_$BINNAME$'
-    if 'Logging' in log_setup.config:
-        filename = log_setup.config['Logging'].get(config_name, filename)
+    filename = "$TIMESTAMP$_$BINNAME$"
+    if "Logging" in log_setup.config:
+        filename = log_setup.config["Logging"].get(config_name, filename)
 
     filename = replace_string_path_arguments(filename, binpath, logfile_timestamp, force_use_logfile_timestamp=force_use_logfile_timestamp)
 
@@ -81,18 +93,17 @@ def generate_filename(config_name, binpath, logfile_timestamp=None, force_use_lo
 
 
 class Reporter(metaclass=Singleton):
-    def __init__(self, binary='', sdk_name='auto', reporter_level=LogLevel.INFO):
-
-        if binary == '':
-            raise RuntimeError('binary to report is empty')
+    def __init__(self, binary="", sdk_name="auto", reporter_level=LogLevel.INFO):
+        if binary == "":
+            raise RuntimeError("binary to report is empty")
 
         self.reporter_level = logging.getLevelName(reporter_level.upper())
 
         # Open the initial file
-        path = generate_basedir('log_folder', Path(binary))
-        self.filepath = path / f'{generate_filename("log_filename", Path(binary))}.json'
+        path = generate_basedir("log_folder", Path(binary))
+        self.filepath = path / f"{generate_filename('log_filename', Path(binary))}.json"
         self.filename = self.filepath.resolve()
-        self.file = open(self.filepath, 'w')
+        self.file = open(self.filepath, "w")
 
         self.start = timeit.default_timer()
 
@@ -102,25 +113,17 @@ class Reporter(metaclass=Singleton):
         # Keep a set of unique issues that we do not want to duplicate. Dict keeps one set per plugin
         self.unique_issues = {}
 
-        enclave_ranges = [f'({min:#x}, {max:#x})' for (min, max) in get_enclave_range()]
+        enclave_ranges = [f"({min:#x}, {max:#x})" for (min, max) in get_enclave_range()]
 
         # The first object in each json contains metadata
-        metadata = {
-            "type": JsonEntryId.ENTRY_ID_METADATA,
-            "binary": Path(binary).name,
-            "time": datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
-            "start_timestamp": datetime.datetime.now().timestamp(),
-            "sdk": sdk_name,
-            "enclave_range" : f'[{", ".join(enclave_ranges)}]'
-        }
+        metadata = {"type": JsonEntryId.ENTRY_ID_METADATA, "binary": Path(binary).name, "time": datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"), "start_timestamp": datetime.datetime.now().timestamp(), "sdk": sdk_name, "enclave_range": f"[{', '.join(enclave_ranges)}]"}
 
-        self.file.write('[\n')
+        self.file.write("[\n")
         self.file.write(json.dumps(metadata))
-        self.file.write(',\n')
+        self.file.write(",\n")
 
         # Start the reporter by registering the system events plugin for relevant system events
-        self.register_plugin('SystemEvents', 'Relevant events during Pandora execution.', SYSTEM_EVENTS_REPORT_NAME)
-
+        self.register_plugin("SystemEvents", "Relevant events during Pandora execution.", SYSTEM_EVENTS_REPORT_NAME)
 
     def get_filepath(self):
         return self.filepath
@@ -129,16 +132,11 @@ class Reporter(metaclass=Singleton):
         """
         Registers a plugin by appending a plugin entry to the log.
         """
-        self.plugins[shortname] = {'name': name, 'ip': defaultdict(set)}
+        self.plugins[shortname] = {"name": name, "ip": defaultdict(set)}
 
-        plugin_data = {
-            'type': JsonEntryId.ENTRY_ID_PLUGIN,
-            'name': name,
-            'desc': desc,
-            'shortname': shortname
-        }
+        plugin_data = {"type": JsonEntryId.ENTRY_ID_PLUGIN, "name": name, "desc": desc, "shortname": shortname}
         self.file.write(json.dumps(plugin_data))
-        self.file.write(',\n')
+        self.file.write(",\n")
 
         # also register this plugin with the unique issues
         self.unique_issues[shortname] = set()
@@ -151,26 +149,25 @@ class Reporter(metaclass=Singleton):
         for shortname, plug in self.plugins.items():
             lvl_summaries = []
             pretty_ips = {}
-            ip = plug['ip']
-            name = plug['name']
+            ip = plug["ip"]
+            name = plug["name"]
             for sev, ips in ip.items():
                 num = len(ips)
-                lvl = f'{format_log_level(num, sev)} unique {format_log_level(sev, sev)} issue{"s" if num > 1 else ""}'
+                lvl = f"{format_log_level(num, sev)} unique {format_log_level(sev, sev)} issue{'s' if num > 1 else ''}"
                 lvl_summaries.append(lvl)
-                pretty_ips[sev] = '; '.join([f"'{info}' at {ip:#x}" for (ip, info) in ips])
+                pretty_ips[sev] = "; ".join([f"'{info}' at {ip:#x}" for (ip, info) in ips])
 
-            issues = f'{"; ".join(lvl_summaries)}.' if lvl_summaries else 'no issues.'
+            issues = f"{'; '.join(lvl_summaries)}." if lvl_summaries else "no issues."
 
-            log_always(logger, format_header(f'\n{name} summary:') + f' {name} reported {issues}')
+            log_always(logger, format_header(f"\n{name} summary:") + f" {name} reported {issues}")
 
             if lvl_summaries:
-                log_always(logger, format_table(pretty_ips, key_hdr='Severity', val_hdr=f'Reports by {name}'))
+                log_always(logger, format_table(pretty_ips, key_hdr="Severity", val_hdr=f"Reports by {name}"))
 
-        self.file.write(json.dumps({"type": JsonEntryId.ENTRY_ID_METADATA,
-                                    "stop_timestamp": datetime.datetime.now().timestamp()}))
-        self.file.write('\n]')
+        self.file.write(json.dumps({"type": JsonEntryId.ENTRY_ID_METADATA, "stop_timestamp": datetime.datetime.now().timestamp()}))
+        self.file.write("\n]")
         self.file.close()
-        log_always(logger, f'\n\nPandora log data stored at {format_link(self.filename, self.filename)}')
+        log_always(logger, f"\n\nPandora log data stored at {format_link(self.filename, self.filename)}")
 
     def report_severity_stats(self, logger):
         """
@@ -181,28 +178,23 @@ class Reporter(metaclass=Singleton):
 
         for shortname, plug in self.plugins.items():
             # Map the dict as a length of each value
-            lvl_summaries = defaultdict(int, dict(map(lambda x: (x[0], len(x[1])), plug['ip'].items())))
+            lvl_summaries = defaultdict(int, {x[0]: len(x[1]) for x in plug["ip"].items()})
 
             # And get a tuple from that in the order (critical, warning, debug)
-            lvl_tuple = (lvl_summaries[logging.getLevelName(logging.CRITICAL)],
-                         lvl_summaries[logging.getLevelName(logging.WARNING)],
-                         lvl_summaries[logging.getLevelName(logging.DEBUG)]
-                         )
+            lvl_tuple = (lvl_summaries[logging.getLevelName(logging.CRITICAL)], lvl_summaries[logging.getLevelName(logging.WARNING)], lvl_summaries[logging.getLevelName(logging.DEBUG)])
 
             if lvl_tuple == (0, 0, 0):
-                return 'No issues reported.'
+                return "No issues reported."
 
-            s = f'{lvl_tuple[0]} CRITICAL issues' + ', '
-            s += f'{lvl_tuple[1]} WARNING  issues' + ', and '
-            s += f'{lvl_tuple[2]} DEBUG issues'
+            s = f"{lvl_tuple[0]} CRITICAL issues" + ", "
+            s += f"{lvl_tuple[1]} WARNING  issues" + ", and "
+            s += f"{lvl_tuple[2]} DEBUG issues"
 
-            severity_dict[plug['name']] = s
+            severity_dict[plug["name"]] = s
 
-        log_always(logger, format_table(severity_dict, key_hdr='Plugin', val_hdr='Statistics'))
+        log_always(logger, format_table(severity_dict, key_hdr="Plugin", val_hdr="Statistics"))
 
-
-    def report(self, info, state, callee_logger, plugin_shortname, severity=logging.INFO, extra_info=None, only_once = False,
-               extra_sections=None):
+    def report(self, info, state, callee_logger, plugin_shortname, severity=logging.INFO, extra_info=None, only_once=False, extra_sections=None):
         """
         Reports an incident for the given state and the given plugin/severity.
         Only_once can be used for low-severity reports that should only be noted once to not bloat up the reports.
@@ -232,7 +224,7 @@ class Reporter(metaclass=Singleton):
         ip = state.scratch.ins_addr if state.scratch.ins_addr is not None else state.solver.eval_one(state.regs.ip)
 
         # print short info on terminal
-        ip_info = f'@{ip:#x}: ' + info
+        ip_info = f"@{ip:#x}: " + info
 
         if only_once or pandora_options.PandoraOptions().get_option(pandora_options.PANDORA_REPORT_ONLY_UNIQUE):
             # Abort early if we are in only once mode and already know this info at that ip
@@ -243,24 +235,24 @@ class Reporter(metaclass=Singleton):
                 self.unique_issues[plugin_shortname].add(ip_info)
 
         if severity > logging.INFO:
-            callee_logger.log(severity, '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            callee_logger.log(severity, f'!!!! {ip_info:^72} !!!!')
-            callee_logger.log(severity, '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            callee_logger.log(severity, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            callee_logger.log(severity, f"!!!! {ip_info:^72} !!!!")
+            callee_logger.log(severity, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         else:
             callee_logger.log(severity, ip_info)
 
         if severity < self.reporter_level:
             # Early out if the reported severity is to be ignored by the reporter.
-            callee_logger.log(severity, 'Not writing this issue to report since it is below the report-level.')
+            callee_logger.log(severity, "Not writing this issue to report since it is below the report-level.")
         else:
             # We seem to be ready for report writing. Prepare the item and write it to file.
             sym = SymbolManager().get_symbol(ip)
-            self.plugins[plugin_shortname]['ip'][logging.getLevelName(severity)].add((ip, info))
+            self.plugins[plugin_shortname]["ip"][logging.getLevelName(severity)].add((ip, info))
 
             if pandora_options.PandoraOptions().get_option(pandora_options.PANDORA_REPORT_OMIT_ATTACKER_CONSTRAINTS):
-                attacker_constraints = ''
+                attacker_constraints = ""
             else:
-                attacker_constraints = format_attacker_constraints(state).split('\n')
+                attacker_constraints = format_attacker_constraints(state).split("\n")
 
             report_element = {
                 "type": JsonEntryId.ENTRY_ID_DATA,
@@ -278,5 +270,5 @@ class Reporter(metaclass=Singleton):
             }
 
             self.file.write(json.dumps(report_element))
-            self.file.write(',\n')
+            self.file.write(",\n")
             self.file.flush()

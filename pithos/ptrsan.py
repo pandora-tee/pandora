@@ -1,20 +1,22 @@
+import logging
+
 import angr
 import claripy
 
 from explorer import taint
-from ui.report import Reporter
-from utilities.angr_helper import get_reg_value
 from pithos.BasePlugin import BasePlugin
 from ui.action import UserAction
-import logging
-
-from ui.log_format import dump_attacker_constraints, dump_solver, format_fields, format_ast
+from ui.log_format import (
+    format_ast,
+)
+from ui.report import Reporter
+from utilities.angr_helper import get_reg_value
 
 logger = logging.getLogger(__name__)
 
 # Global variables used by the hooks.
 taint_action = UserAction.NONE
-shortname = 'ptr'
+shortname = "ptr"
 
 
 class PointerSanitizationPlugin(BasePlugin):
@@ -49,7 +51,7 @@ class PointerSanitizationPlugin(BasePlugin):
 
     @staticmethod
     def get_help_text():
-        return 'Validates attacker-tainted pointer dereferences.'
+        return "Validates attacker-tainted pointer dereferences."
 
     def init_globals(self):
         global taint_action, shortname
@@ -61,17 +63,16 @@ class PointerSanitizationPlugin(BasePlugin):
         Note that because read hooks are triggered as angr.BP_BEFORE, we don't have the data yet
         """
         # Criterion 1: address may lie inside or outside enclave => Return CRITICAL
-        init_state.inspect.b('inside_or_outside_mem_read', when=angr.BP_BEFORE, action=unconstrained_read_hook)
-        init_state.inspect.b('inside_or_outside_mem_write', when=angr.BP_BEFORE, action=unconstrained_write_hook)
+        init_state.inspect.b("inside_or_outside_mem_read", when=angr.BP_BEFORE, action=unconstrained_read_hook)
+        init_state.inspect.b("inside_or_outside_mem_write", when=angr.BP_BEFORE, action=unconstrained_write_hook)
 
         # Criterion 2: address is tainted AND address lies entirely inside enclave => Return WARNING
-        init_state.inspect.b('trusted_mem_read', when=angr.BP_BEFORE, action=trusted_mem_read_hook)
-        init_state.inspect.b('trusted_mem_write', when=angr.BP_BEFORE, action=trusted_mem_write_hook)
+        init_state.inspect.b("trusted_mem_read", when=angr.BP_BEFORE, action=trusted_mem_read_hook)
+        init_state.inspect.b("trusted_mem_write", when=angr.BP_BEFORE, action=trusted_mem_write_hook)
 
         # Criterion 3: address is not-tainted AND address lies outside enclave => Return CRITICAL
-        init_state.inspect.b('untrusted_mem_read', when=angr.BP_BEFORE, action=untrusted_read_hook)
-        init_state.inspect.b('untrusted_mem_write', when=angr.BP_BEFORE, action=untrusted_write_hook)
-
+        init_state.inspect.b("untrusted_mem_read", when=angr.BP_BEFORE, action=untrusted_read_hook)
+        init_state.inspect.b("untrusted_mem_write", when=angr.BP_BEFORE, action=untrusted_write_hook)
 
 
 def unconstrained_read_hook(state):
@@ -81,11 +82,10 @@ def unconstrained_read_hook(state):
     addr = state.inspect.mem_read_address
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_read_length
-    info = 'Unconstrained read'
-    extra_info = f'Read address may lie inside or outside enclave'
+    info = "Unconstrained read"
+    extra_info = "Read address may lie inside or outside enclave"
 
-    _report_error(state, addr, tainted, length, info, ptr_in_enclave=True,
-                      severity=logging.CRITICAL, extra_info=extra_info)
+    _report_error(state, addr, tainted, length, info, ptr_in_enclave=True, severity=logging.CRITICAL, extra_info=extra_info)
 
 
 def unconstrained_write_hook(state):
@@ -96,15 +96,14 @@ def unconstrained_write_hook(state):
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_write_length
     data = state.inspect.mem_write_expr
-    info = 'Unconstrained write'
-    extra_info = f'Write address may lie inside or outside enclave'
+    info = "Unconstrained write"
+    extra_info = "Write address may lie inside or outside enclave"
 
     # Length may be None. In that case, take the size from data
     if length is None:
         length = len(data)
 
-    _report_error(state, addr, tainted, length, info, ptr_in_enclave=True,
-                      severity=logging.CRITICAL, data=data, extra_info=extra_info)
+    _report_error(state, addr, tainted, length, info, ptr_in_enclave=True, severity=logging.CRITICAL, data=data, extra_info=extra_info)
 
 
 def trusted_mem_read_hook(state):
@@ -114,13 +113,11 @@ def trusted_mem_read_hook(state):
     addr = state.inspect.mem_read_address
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_read_length
-    info = f'Attacker tainted read inside enclave'
-    extra_info = f'Issue downgraded to a warning since read is strictly constrained to memory region inside enclave.' \
-                 f' Disclaimer: This is a heuristic only, please double check manually!'
+    info = "Attacker tainted read inside enclave"
+    extra_info = "Issue downgraded to a warning since read is strictly constrained to memory region inside enclave. Disclaimer: This is a heuristic only, please double check manually!"
 
     if tainted:
-        _report_error(state, addr, tainted, length, info, ptr_in_enclave=True, severity=logging.WARNING,
-                      extra_info=extra_info)
+        _report_error(state, addr, tainted, length, info, ptr_in_enclave=True, severity=logging.WARNING, extra_info=extra_info)
 
 
 def trusted_mem_write_hook(state):
@@ -131,17 +128,15 @@ def trusted_mem_write_hook(state):
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_write_length
     data = state.inspect.mem_write_expr
-    info = f'Attacker tainted write inside enclave'
-    extra_info = f'Issue downgraded to a warning since write is strictly constrained to memory region inside enclave.' \
-                 f' Disclaimer: This is a heuristic only, please double check manually!'
+    info = "Attacker tainted write inside enclave"
+    extra_info = "Issue downgraded to a warning since write is strictly constrained to memory region inside enclave. Disclaimer: This is a heuristic only, please double check manually!"
 
     # Length may be None. In that case, take the size from data
     if length is None:
         length = len(data)
 
     if tainted:
-        _report_error(state, addr, tainted, length, info, ptr_in_enclave=True, severity=logging.WARNING, data=data,
-                      extra_info=extra_info)
+        _report_error(state, addr, tainted, length, info, ptr_in_enclave=True, severity=logging.WARNING, data=data, extra_info=extra_info)
 
 
 def untrusted_read_hook(state):
@@ -151,7 +146,7 @@ def untrusted_read_hook(state):
     addr = state.inspect.mem_read_address
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_read_length
-    info = f'Non-tainted read outside enclave'
+    info = "Non-tainted read outside enclave"
 
     if not tainted:
         _report_error(state, addr, tainted, length, info, ptr_in_enclave=False, severity=logging.CRITICAL)
@@ -165,7 +160,7 @@ def untrusted_write_hook(state):
     tainted = taint.is_tainted(addr)
     length = state.inspect.mem_write_length
     data = state.inspect.mem_write_expr
-    info = f'Non-tainted write outside enclave'
+    info = "Non-tainted write outside enclave"
     # Length may be None. In that case, take the size from data
     if length is None:
         length = len(data)
@@ -175,46 +170,39 @@ def untrusted_write_hook(state):
 
 
 def _report_error(
-        state,
-        addr,           # Address of memory access
-        tainted,        # True if address is tainted
-        length,         # Length of memory access
-        info,           # Message to report to the reporter
-        ptr_in_enclave, # True if pointer can lie in enclave
-        severity=logging.CRITICAL,
-        data=None,
-        extra_info=None,
+    state,
+    addr,  # Address of memory access
+    tainted,  # True if address is tainted
+    length,  # Length of memory access
+    info,  # Message to report to the reporter
+    ptr_in_enclave,  # True if pointer can lie in enclave
+    severity=logging.CRITICAL,
+    data=None,
+    extra_info=None,
 ):
     """
-     Reports error to the reporter. Appends useful information such as address range and data if available.
-     """
+    Reports error to the reporter. Appends useful information such as address range and data if available.
+    """
     if type(addr) is int:
         addr = claripy.BVV(addr, 64)
 
     reporter = Reporter()
-    ip = get_reg_value(state, 'ip')
+    ip = get_reg_value(state, "ip")
     symbol = state.project.loader.find_symbol(ip, fuzzy=True)
-    unique = symbol not in reporter.plugins[shortname]['ip']
+    unique = symbol not in reporter.plugins[shortname]["ip"]
 
     # Send this event to reporter
     addr_max = state.solver.max(addr)
     addr_min = state.solver.min(addr)
-    addr_range = f'[{format_ast(addr_min)}, {format_ast(addr_max)}]'
+    addr_range = f"[{format_ast(addr_min)}, {format_ast(addr_max)}]"
 
-    can_wrap = state.solver.satisfiable(extra_constraints=[addr.UGT(addr+length-1)])
+    can_wrap = state.solver.satisfiable(extra_constraints=[addr.UGT(addr + length - 1)])
 
-    extra = {
-            'Address': addr,
-            'Attacker tainted': tainted,
-            'Length': length,
-            'Pointer range': addr_range,
-            'Pointer can wrap address space': can_wrap,
-            'Pointer can lie in enclave': ptr_in_enclave
-    }
+    extra = {"Address": addr, "Attacker tainted": tainted, "Length": length, "Pointer range": addr_range, "Pointer can wrap address space": can_wrap, "Pointer can lie in enclave": ptr_in_enclave}
     if data is not None:
-        extra['Data'] = state.solver.simplify(data)
+        extra["Data"] = state.solver.simplify(data)
     if extra_info is not None:
-        extra['Extra info'] = extra_info
+        extra["Extra info"] = extra_info
 
     # Lastly, send off that issue to the reporter
     reporter.report(info, state, logger, shortname, severity, extra)

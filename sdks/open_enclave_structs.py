@@ -11,7 +11,7 @@ https://github.com/openenclave/openenclave/blob/613f6a4a7f82a37bbe5c95b1d978a090
 /* The maxiumum value for a four-byte enum tag */
 #define OE_ENUM_MAX 0xffffffff
 """
-OE_ENUM_MAX = 0xffffffff
+OE_ENUM_MAX = 0xFFFFFFFF
 
 
 class OEEnclaveType(enum.Enum):
@@ -46,10 +46,11 @@ class OEEnclaveType(enum.Enum):
         __OE_ENCLAVE_TYPE_MAX = OE_ENUM_MAX,
     } oe_enclave_type_t;
     """
-    OE_ENCLAVE_TYPE_AUTO = 1,
-    OE_ENCLAVE_TYPE_SGX = 2,
-    OE_ENCLAVE_TYPE_OPTEE = 3,
-    __OE_ENCLAVE_TYPE_MAX = OE_ENUM_MAX,
+
+    OE_ENCLAVE_TYPE_AUTO = (1,)
+    OE_ENCLAVE_TYPE_SGX = (2,)
+    OE_ENCLAVE_TYPE_OPTEE = (3,)
+    __OE_ENCLAVE_TYPE_MAX = (OE_ENUM_MAX,)
 
 
 class OEEnclaveSizeSettings(ctypes.LittleEndianStructure):
@@ -62,14 +63,15 @@ class OEEnclaveSizeSettings(ctypes.LittleEndianStructure):
         uint64_t num_tcs;
     } oe_enclave_size_settings_t;
     """
+
     _fields_ = [
-        ('num_heap_pages', ctypes.c_uint64),
-        ('num_stack_pages', ctypes.c_uint64),
-        ('num_tcs', ctypes.c_uint64),
+        ("num_heap_pages", ctypes.c_uint64),
+        ("num_stack_pages", ctypes.c_uint64),
+        ("num_tcs", ctypes.c_uint64),
     ]
 
     def __repr__(self):
-        return '<' + str({n: getattr(self, n) for (n, _) in self._fields_}) + '>'
+        return "<" + str({n: getattr(self, n) for (n, _) in self._fields_}) + ">"
 
 
 class OEEnclavePropertiesHeader(ctypes.LittleEndianStructure):
@@ -86,17 +88,20 @@ class OEEnclavePropertiesHeader(ctypes.LittleEndianStructure):
         oe_enclave_size_settings_t size_settings; /**< (8) Enclave settings */
     } oe_enclave_properties_header_t;
     """
+
     _fields_ = [
-        ('size', ctypes.c_uint32),
-        ('enclave_type', ctypes.c_uint32),  # Enums are 4byte integers, we use unsigned for 0xffffffff
-        ('size_settings', OEEnclaveSizeSettings),
+        ("size", ctypes.c_uint32),
+        ("enclave_type", ctypes.c_uint32),  # Enums are 4byte integers, we use unsigned for 0xffffffff
+        ("size_settings", OEEnclaveSizeSettings),
     ]
 
     def __str__(self):
-        partial_dict = {n: getattr(self, n) for (n, _) in self._fields_
-                        if n not in ['size_settings']  # 'family_id', 'extended_product_id',
-                        }
-        partial_dict['size_settings'] = str(self.size_settings)
+        partial_dict = {
+            n: getattr(self, n)
+            for (n, _) in self._fields_
+            if n not in ["size_settings"]  # 'family_id', 'extended_product_id',
+        }
+        partial_dict["size_settings"] = str(self.size_settings)
         return ui.log_format.format_fields(partial_dict)
 
 
@@ -110,14 +115,15 @@ class OESgxEnclaveFlags(ctypes.LittleEndianStructure):
         uint32_t reserved : 30;
     } oe_sgx_enclave_flags_t;
     """
+
     _fields_ = [
-        ('capture_pf_gp_exceptions', ctypes.c_uint32),
-        ('create_zero_base_enclave', ctypes.c_uint32),
-        ('reserved', ctypes.c_uint32),
+        ("capture_pf_gp_exceptions", ctypes.c_uint32),
+        ("create_zero_base_enclave", ctypes.c_uint32),
+        ("reserved", ctypes.c_uint32),
     ]
 
     def __repr__(self):
-        return '<' + str({n: getattr(self, n) for (n, _) in self._fields_}) + '>'
+        return "<" + str({n: getattr(self, n) for (n, _) in self._fields_}) + ">"
 
 
 class OESgxEnclaveConfig(ctypes.LittleEndianStructure):
@@ -142,24 +148,23 @@ class OESgxEnclaveConfig(ctypes.LittleEndianStructure):
         uint64_t start_address;
     } oe_sgx_enclave_config_t;
     """
+
     _fields_ = [
-        ('product_id', ctypes.c_uint16),
-        ('security_version', ctypes.c_uint16),
-        ('flags', OESgxEnclaveFlags),
-        ('family_id', ctypes.c_uint8 * 16),
-        ('extended_product_id', ctypes.c_uint8 * 16),
-        ('attributes', ctypes.c_uint64),
-        ('xfrm', ctypes.c_uint64),
-        ('start_address', ctypes.c_uint64),
+        ("product_id", ctypes.c_uint16),
+        ("security_version", ctypes.c_uint16),
+        ("flags", OESgxEnclaveFlags),
+        ("family_id", ctypes.c_uint8 * 16),
+        ("extended_product_id", ctypes.c_uint8 * 16),
+        ("attributes", ctypes.c_uint64),
+        ("xfrm", ctypes.c_uint64),
+        ("start_address", ctypes.c_uint64),
     ]
 
     def __str__(self):
-        partial_dict = {n: getattr(self, n) for (n, _) in self._fields_
-                        if n not in ['family_id', 'extended_product_id', 'flags']
-                        }
-        partial_dict['family_id'] = str(self.family_id)
-        partial_dict['extended_product_id'] = str(self.extended_product_id)
-        partial_dict['flags'] = str(self.flags)
+        partial_dict = {n: getattr(self, n) for (n, _) in self._fields_ if n not in ["family_id", "extended_product_id", "flags"]}
+        partial_dict["family_id"] = str(self.family_id)
+        partial_dict["extended_product_id"] = str(self.extended_product_id)
+        partial_dict["flags"] = str(self.flags)
         return ui.log_format.format_fields(partial_dict)
 
 
@@ -177,13 +182,14 @@ class OESgxEnclaveImageInfo(ctypes.LittleEndianStructure):
         uint64_t enclave_size;
     } oe_sgx_enclave_image_info_t;
     """
+
     _fields_ = [
-        ('oeinfo_rva', ctypes.c_uint64),
-        ('oeinfo_size', ctypes.c_uint64),
-        ('reloc_rva', ctypes.c_uint64),
-        ('reloc_size', ctypes.c_uint64),
-        ('heap_rva', ctypes.c_uint64),
-        ('enclave_size', ctypes.c_uint64),
+        ("oeinfo_rva", ctypes.c_uint64),
+        ("oeinfo_size", ctypes.c_uint64),
+        ("reloc_rva", ctypes.c_uint64),
+        ("reloc_size", ctypes.c_uint64),
+        ("heap_rva", ctypes.c_uint64),
+        ("enclave_size", ctypes.c_uint64),
     ]
 
     def __str__(self):
@@ -281,18 +287,14 @@ class OESgxEnclaveProperties(ctypes.LittleEndianStructure):
     };                                                                    \
     OE_INFO_SECTION_END
     """
+
     _fields_ = [
-        ('header', OEEnclavePropertiesHeader),
-        ('config', OESgxEnclaveConfig),
-        ('image_info', OESgxEnclaveImageInfo),
-        ('sigstruct', ctypes.c_uint8 * OE_SGX_SIGSTRUCT_SIZE),
-        ('end_marker', ctypes.c_uint64),
+        ("header", OEEnclavePropertiesHeader),
+        ("config", OESgxEnclaveConfig),
+        ("image_info", OESgxEnclaveImageInfo),
+        ("sigstruct", ctypes.c_uint8 * OE_SGX_SIGSTRUCT_SIZE),
+        ("end_marker", ctypes.c_uint64),
     ]
 
     def __str__(self):
-        return f'Open Enclave SGX Properties: \n' \
-               f'Header: {str(self.header)}\n' \
-               f'Config: {str(self.config)}\n' \
-               f'Image Info: {str(self.image_info)}\n' \
-               f'sigstruct is {len(self.sigstruct)} bytes long\n' \
-               f'end_marker: {hex(self.end_marker)}'
+        return f"Open Enclave SGX Properties: \nHeader: {str(self.header)}\nConfig: {str(self.config)}\nImage Info: {str(self.image_info)}\nsigstruct is {len(self.sigstruct)} bytes long\nend_marker: {hex(self.end_marker)}"
