@@ -92,7 +92,6 @@ class EnclaveAwareMixin(MemoryMixin):
         return r
 
     def load(self, addr, size=None, with_enclave_boundaries=True, **kwargs):
-        read_was_in_trusted_mem = False
         breakpoint_event = ''
 
 

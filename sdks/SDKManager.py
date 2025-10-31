@@ -210,7 +210,6 @@ class SDKManager(metaclass=Singleton):
         """
         Returns either the initialized SDK or the possible sdk base class if one was detected.
         """
-        target = None
         if self.sdk is not None:
             return self.sdk
         else:

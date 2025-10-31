@@ -91,7 +91,6 @@ class SimEncrypt(SimProcedure):
         print_info(self.state, "sancus_encrypt", 0x1384, params, "symbolizing output state")
 
         to_encrypt_data = get_sym_memory_value(self.state, plain, plain_end, True)
-        ad = get_sym_memory_value(self.state, ad_start, ad_end, True)
         mac = get_sym_memory_value(self.state, tag, 2, True)
         #SHOULD DO SOME ENCRYPT WITH KEY HERE
         set_memory_value(self.state, body, to_encrypt_data, True)
@@ -118,8 +117,6 @@ class SimDecrypt(SimProcedure):
         print_info(self.state, "sancus_decrypt", 0x1385, params, "symbolizing output state")
 
         to_decrypt_data = get_sym_memory_value(self.state, cipher, cipher_end, True)
-        ad = get_sym_memory_value(self.state, ad_start, ad_end, True)
-        mac = get_sym_memory_value(self.state, tag, 2, True)
         #SHOULD DO SOME DECRYPT WITH KEY HERE
         set_memory_value(self.state, body, to_decrypt_data, True)
 

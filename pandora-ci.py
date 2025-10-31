@@ -64,7 +64,6 @@ def run_ci(ctx : CIContext, config):
         examples_folder = (base_path.parent / 'pandora-examples').resolve().as_posix()
         # Start creating tasks
         task_list = []
-        task_counter = 0
         for binary_name in ci_binaries:
             command_name = f'{sys.executable} {base_path.resolve().as_posix()}/pandora.py explore ' \
                            f'-c {config} ' \
@@ -297,10 +296,9 @@ def fix(ctx: CIContext):
         file_string = file.read()
 
     logger.info('Loaded file. Attempting to parse it...')
-    file_json = {}
     fixed = False
     try:
-        file_json = json.loads(file_string)
+        json.loads(file_string)
         fixed = True
     except json.JSONDecodeError as e:
         logger.info('File seems to be broken. Attempting to fix it...')
@@ -324,7 +322,7 @@ def fix(ctx: CIContext):
 
             logger.info(f'Attempting with json end {repr(attempt_fix[-10:])}')
             try:
-                file_json = json.loads(attempt_fix)
+                json.loads(attempt_fix)
                 fixable = True
             except json.JSONDecodeError:
                 logger.info("This did not work...I don't seen to be able to fix this issue.")
