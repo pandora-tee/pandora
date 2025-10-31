@@ -5,7 +5,7 @@ from inspect import getmembers, isfunction
 import typer
 
 import pandora_options
-from ui.log_format import *
+from ui.log_format import format_fields, format_header, format_inline_header, log_always
 
 logger = logging.getLogger(__name__)
 

@@ -5,8 +5,8 @@ from collections import defaultdict
 from pathlib import Path
 
 import dominate
+import dominate.tags as tags
 from ansi2html import Ansi2HTMLConverter
-from dominate.tags import *
 
 from ui import pandora_root_dir
 from ui.log_format import (
@@ -158,9 +158,9 @@ class HTMLFormatter(BaseFormatter):
                     dominate.util.raw(file.read())
                     dominate.util.raw("</style>\n")
 
-            meta(name="viewport", content="width=device-width, initial-scale=1")
+            tags.meta(name="viewport", content="width=device-width, initial-scale=1")
             dominate.util.raw("\n" + self.conv.produce_headers())
-        self.content = self.html.body.add(div(cls="container d-grid gap-3", style="margin-bottom:200px"))
+        self.content = self.html.body.add(tags.div(cls="container d-grid gap-3", style="margin-bottom:200px"))
 
         with self.html.body:
             for js_file in ["assets/bootstrap.bundle.min.js"]:
@@ -170,8 +170,8 @@ class HTMLFormatter(BaseFormatter):
                     dominate.util.raw("</script>\n")
 
         with self.content:
-            h1("Report " + title, cls="display-3 text-center")
-            hr()
+            tags.h1("Report " + title, cls="display-3 text-center")
+            tags.hr()
 
     def save_report(self):
         self.create_ip_sections()
@@ -189,28 +189,28 @@ class HTMLFormatter(BaseFormatter):
     def summary(self, severity_dict):
         table_dict = {}
         for sev, ips in severity_dict.items():
-            table_dict[sev] = ul()
+            table_dict[sev] = tags.ul()
             for ip, info in ips:
-                table_dict[sev] += li(em(info), f" at {ip:#x}")
+                table_dict[sev] += tags.li(tags.em(info), f" at {ip:#x}")
 
         with self.content:
-            h2("Report summary")
+            tags.h2("Report summary")
             self.create_table(table_dict, key="Severity", val="Reported issues")
 
     def create_box(self, content, desc="", icon=None, alert_type="primary", close=False):
         with self.content:
-            d = div(cls=f"alert alert-{alert_type} d-flex align-items-center lead", role="alert")
+            d = tags.div(cls=f"alert alert-{alert_type} d-flex align-items-center lead", role="alert")
             with d:
                 if icon:
-                    i(cls=f"bi bi-{icon}-fill flex-shrink-0 me-2", style="font-size: 1.7em")
-                div(strong(f"{desc}: ") if desc else "", content)
+                    tags.i(cls=f"bi bi-{icon}-fill flex-shrink-0 me-2", style="font-size: 1.7em")
+                tags.div(tags.strong(f"{desc}: ") if desc else "", content)
                 if close:
-                    button(type="button", cls="btn-close", data_bs_dismiss="alert")
+                    tags.button(type="button", cls="btn-close", data_bs_dismiss="alert")
                     d["class"] += " alert-dismissible fade show"
 
     def text(self, text):
         with self.content:
-            p(text)
+            tags.p(text)
 
     def info(self, title, info):
         self.create_box(info, title, "info-circle", "primary")
@@ -219,13 +219,13 @@ class HTMLFormatter(BaseFormatter):
         self.create_box(escape_ansi(info), title, "exclamation-triangle", "warning")
 
     def create_badge(self, lbl, style):
-        return span(lbl, cls=f"badge rounded-pill {style}")
+        return tags.span(lbl, cls=f"badge rounded-pill {style}")
 
     def create_badges(self, badges_dict):
         """
         NOTE: we require a dict here to preserve order of the bagdges
         """
-        badges = span(style="font-size:.7em")
+        badges = tags.span(style="font-size:.7em")
         for lbl, style in badges_dict.items():
             badges += self.create_badge(lbl, style)
         return badges
@@ -233,7 +233,7 @@ class HTMLFormatter(BaseFormatter):
     def create_ip_sections(self):
         if not self.sec_map:
             return
-        ip_secs = ul(cls="list-group", id="ip_sections")
+        ip_secs = tags.ul(cls="list-group", id="ip_sections")
 
         # create a collapsible list of issue sections per instruction (IP)
         for ip, sec_lst in self.sec_map.items():
@@ -242,60 +242,60 @@ class HTMLFormatter(BaseFormatter):
                 sec_lst = sec_lst[: self.max_ips]
             else:
                 badges = {f"{len(sec_lst)}": "bg-primary"}
-            ip_sec = ul(cls="list-group list-group-flush collapse", id=self.make_unique_label("ip_section"))
+            ip_sec = tags.ul(cls="list-group list-group-flush collapse", id=self.make_unique_label("ip_section"))
             for card, desc, severity, sym in sec_lst:
                 sev_collapse = f" collapse show {severity.lower()}"
-                ip_sec += li(card, cls="list-group-item" + sev_collapse)
+                ip_sec += tags.li(card, cls="list-group-item" + sev_collapse)
                 badges[sym] = "bg-light text-dark"
                 badges[severity] = self.badge_styles[severity] + sev_collapse
                 badges[desc] = self.badge_styles[severity] + sev_collapse
 
             badges = self.create_badges(badges)
-            header = div(h3(a(i(cls="bi bi-chevron-down"), f" Issues reported at {ip:#x}", badges, cls="text-muted text-decoration-none")), cls="w-100", data_bs_toggle="collapse", data_bs_target=f"#{ip_sec['id']}")
-            ip_secs += li(header, ip_sec, cls="list-group-item")
+            header = tags.div(tags.h3(tags.a(tags.i(cls="bi bi-chevron-down"), f" Issues reported at {ip:#x}", badges, cls="text-muted text-decoration-none")), cls="w-100", data_bs_toggle="collapse", data_bs_target=f"#{ip_sec['id']}")
+            ip_secs += tags.li(header, ip_sec, cls="list-group-item")
 
         # create checkboxes to filter based on severity
-        checks = div(cls="row p-1 lead")
+        checks = tags.div(cls="row p-1 lead")
         for lvl in self.badge_styles.keys():
-            check = input_(checked="", cls="form-check-input", type="checkbox", value="", id=self.make_unique_label("check"), data_bs_toggle="collapse", data_bs_target=f".{lvl.lower()}")
-            lbl = label(lvl, cls="form-check-label", fr=check["id"])
-            checks += div(check, lbl, cls="col col-md-auto form-check")
+            check = tags.input_(checked="", cls="form-check-input", type="checkbox", value="", id=self.make_unique_label("check"), data_bs_toggle="collapse", data_bs_target=f".{lvl.lower()}")
+            lbl = tags.label(lvl, cls="form-check-label", fr=check["id"])
+            checks += tags.div(check, lbl, cls="col col-md-auto form-check")
 
-        self.content += h2("Report details ", small("(click to uncollapse)", cls="text-muted"))
+        self.content += tags.h2("Report details ", tags.small("(click to uncollapse)", cls="text-muted"))
         self.content += checks
         self.content += ip_secs
 
     def section(self, ip, sym, desc, severity):
         # create a "section" card to be filled with "subsection" information
         # about this vulnerability
-        self.sec = div(cls="card-text collapse", id=self.make_unique_label("section"))
+        self.sec = tags.div(cls="card-text collapse", id=self.make_unique_label("section"))
 
         # title the card with vulnerability description and badges
         sev = logging.getLevelName(severity)
         badges = self.create_badges({sev: self.badge_styles[sev], f"IP={ip:#x}": "bg-light text-dark"})
-        title = div(h4(a(i(cls="bi bi-chevron-compact-down"), f" {desc}", badges, cls="card-title p-2 text-muted text-decoration-none")), cls="w-100", data_bs_toggle="collapse", data_bs_target=f"#{self.sec['id']}")
-        card = div(title, cls="card")
+        title = tags.div(tags.h4(tags.a(tags.i(cls="bi bi-chevron-compact-down"), f" {desc}", badges, cls="card-title p-2 text-muted text-decoration-none")), cls="w-100", data_bs_toggle="collapse", data_bs_target=f"#{self.sec['id']}")
+        card = tags.div(title, cls="card")
         card += self.sec
 
         # collect cards per IP, to be aggregated upon writing out the report
         self.sec_map[ip].append((card, desc, sev, sym))
 
     def subsection(self, name):
-        self.sec += h5(name, cls="p-2")
-        self.subsec = div(cls="accordion p-2", id=self.make_unique_label("subsection"))
+        self.sec += tags.h5(name, cls="p-2")
+        self.subsec = tags.div(cls="accordion p-2", id=self.make_unique_label("subsection"))
         self.sec += self.subsec
 
     def subsubsection(self, name, contents):
         # https://getbootstrap.com/docs/5.2/components/accordion/
-        with self.subsec.add(div(cls="accordion-item")):
+        with self.subsec.add(tags.div(cls="accordion-item")):
             target_id = self.make_unique_label("collapse")
 
-            h = h6(cls="accordion-header")
-            h += button(name, cls="accordion-button", data_bs_toggle="collapse", data_bs_target=f"#{target_id}")
+            h = tags.h6(cls="accordion-header")
+            h += tags.button(name, cls="accordion-button", data_bs_toggle="collapse", data_bs_target=f"#{target_id}")
 
-            d = div(id=target_id, cls="accordion-collapse collapse")
+            d = tags.div(id=target_id, cls="accordion-collapse collapse")
             # data_bs_parent=f'#{self.subsec["id"]}')
-            d += div(pre(contents, style="white-space: pre-wrap;"), cls="accordion-body")
+            d += tags.div(tags.pre(contents, style="white-space: pre-wrap;"), cls="accordion-body")
 
     def trace(self, name, trace_lst):
         t = "\n".join(trace_lst)
@@ -306,14 +306,14 @@ class HTMLFormatter(BaseFormatter):
 
     def create_table(self, info_dict, key="Key", val="Value"):
         # https://getbootstrap.com/docs/5.2/content/tables/
-        t = table(cls="table table-bordered table-striped")
+        t = tags.table(cls="table table-bordered table-striped")
         if key is not None and val is not None:
-            t += thead(tr(th(key), th(val)))
-        with t.add(tbody()):
+            t += tags.thead(tags.tr(tags.th(key), tags.th(val)))
+        with t.add(tags.tbody()):
             for k, v in info_dict.items():
-                r = tr(cls=f"collapse show {k.lower()}")
-                r += td(k)
-                r += td(v)
+                r = tags.tr(cls=f"collapse show {k.lower()}")
+                r += tags.td(k)
+                r += tags.td(v)
         return t
 
     def table(self, info_dict):
