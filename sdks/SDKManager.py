@@ -62,13 +62,13 @@ class SDKManager(metaclass=Singleton):
             # reduce SDK candidates based on machine architecture in ELF file
             self.target_arch = self.executable_object.header.e_machine.replace("EM_", "").lower()
             if self.target_arch not in SDKS.keys():
-                logger.error(ui.log_format.format_error(f"Detected {elf_arch}: Unsupported architecture!"))
+                logger.error(ui.log_format.format_error(f"Detected {self.target_arch}: Unsupported architecture!"))
                 exit(1)
 
             if self.target_arch == "msp430":
                 logger.debug("Detecting MSP430 binary; dynamically importing angr-platforms..")
                 try:
-                    from angr_platforms.msp430 import (
+                    from angr_platforms.msp430 import (  # noqa: F401,I001
                         arch_msp430,
                         lift_msp430,
                         simos_msp430,

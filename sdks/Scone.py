@@ -1,5 +1,6 @@
 import logging
 
+from sdks.AbstractSDK import AbstractSDK
 from sdks.AbstractSGXSDK import AbstractSGXSDK
 from sdks.common import Tcs, write_bvv_to_memory, write_struct_to_memory
 
