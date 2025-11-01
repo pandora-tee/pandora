@@ -40,4 +40,4 @@ jobs:
         run: |
           cd ${{ github.workspace }}/pandora/
           source .venv/bin/activate
-          ./pandora.py run -n 30 -p ptr,cf -c config-ci.yaml --pandora-option PANDORA_EXPLORE_STACK_DEPTH=1500 ${{ github.workspace }}/sancus/${{ matrix.testcase }}/main.elf
+          ./pandora.py run -n 30 -p ptr,cf -c config-ci.ini --pandora-option PANDORA_EXPLORE_STACK_DEPTH=1500 ${{ github.workspace }}/sancus/${{ matrix.testcase }}/main.elf
