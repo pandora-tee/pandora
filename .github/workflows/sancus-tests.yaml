@@ -19,6 +19,7 @@ jobs:
           MATRIX=$(find -mindepth 2 -type d | jq -cnR '[inputs | select(length>0)]')
           echo $MATRIX
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          tree ${{ github.workspace }}/pandora-examples/sancus/
 
   test:
     runs-on: ubuntu-latest
@@ -59,4 +60,5 @@ jobs:
       - name: Symbolic validation of ${{ matrix.testcase }}
         run: |
           cd ${{ github.workspace }}/pandora/
+          tree ${{ github.workspace }}/
           ./pandora.py run -n 30 -p ptr,cf -c config-ci.ini --pandora-option PANDORA_EXPLORE_STACK_DEPTH=1500 ${{ github.workspace }}/pandora-examples/sancus/${{ matrix.testcase }}/main.elf
