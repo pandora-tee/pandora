@@ -1,0 +1,62 @@
+name: Sancus validation
+on: [push, pull_request]
+
+jobs:
+  matrix-gen:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{steps.list_dirs.outputs.matrix}}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: pandora-tee/pandora-examples
+          sparse-checkout: |
+            sancus/
+          path: ${{ github.workspace }}/pandora-examples/
+      - id: list_dirs
+        run: |
+          cd ${{ github.workspace }}/pandora-examples/sancus/
+          MATRIX=$(find -mindepth 2 -type d | jq -cnR '[inputs | select(length>0)]')
+          echo $MATRIX
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  test:
+    runs-on: ubuntu-latest
+    needs: matrix-gen
+    strategy:
+      fail-fast: false
+      matrix:
+        testcase: ${{fromJson(needs.matrix-gen.outputs.matrix)}}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          path: ${{ github.workspace }}/pandora/
+      - name: Check out pandora examples repository
+        uses: actions/checkout@v5
+        with:
+          repository: pandora-tee/pandora-examples
+          sparse-checkout: |
+            sancus/
+          path: ${{ github.workspace }}/pandora-examples/
+      - name: Setup angr-platforms
+        uses: actions/checkout@v5
+        with:
+          repository: angr/angr-platforms
+          path: ${{ github.workspace }}/pandora/angr-platforms
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install pandora/angr dependencies
+        run: |
+          cd ${{ github.workspace }}/pandora/
+          pip install -r requirements.txt
+          cd ${{ github.workspace }}/pandora/angr-platforms
+          pip install .
+      - name: Symbolic validation of ${{ matrix.testcase }}
+        run: |
+          cd ${{ github.workspace }}/pandora/
+          ./pandora.py run -n 30 -p ptr,cf -c config-ci.ini --pandora-option PANDORA_EXPLORE_STACK_DEPTH=1500 ${{ github.workspace }}/pandora-examples/sancus/${{ matrix.testcase }}/main.elf
