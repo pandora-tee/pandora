@@ -18,7 +18,7 @@ jobs:
           cd sancus/
           MATRIX=$(find -mindepth 2 -type d | jq -cnR '[inputs | select(length>0)]')
           echo $MATRIX
-          echo "::set-output name=matrix::$MATRIX"
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
   test:
     runs-on: ubuntu-latest
@@ -43,12 +43,13 @@ jobs:
       - name: Setup angr-platforms
         uses: actions/checkout@v5
         with:
-          repository: angr/angr-angr-platforms
+          repository: angr/angr-platforms
           path: pandora/angr-platforms
       - name: Setup python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
       - name: Install pandora/angr dependencies
         run: |
           cd ${{ github.workspace }}/pandora/
