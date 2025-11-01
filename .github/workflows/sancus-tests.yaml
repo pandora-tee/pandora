@@ -30,18 +30,18 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: pandora/
       - name: Check out pandora examples repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: pandora-tee/pandora-examples
           sparse-checkout: |
             sancus/
           path: sancus/
       - name: Setup angr-platforms
-        uses: acions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: angr/angr-angr-platforms
           path: pandora/angr-platforms
