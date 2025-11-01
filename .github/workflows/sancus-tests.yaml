@@ -12,10 +12,10 @@ jobs:
           repository: pandora-tee/pandora-examples
           sparse-checkout: |
             sancus/
-          path: sancus/
+          path: pandora-examples/
       - id: list_dirs
         run: |
-          cd sancus/
+          cd pandora-examples/sancus/
           MATRIX=$(find -mindepth 2 -type d | jq -cnR '[inputs | select(length>0)]')
           echo $MATRIX
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
@@ -39,7 +39,7 @@ jobs:
           repository: pandora-tee/pandora-examples
           sparse-checkout: |
             sancus/
-          path: sancus/
+          path: pandora-examples/sancus/
       - name: Setup angr-platforms
         uses: actions/checkout@v5
         with:
@@ -59,4 +59,4 @@ jobs:
       - name: Symbolic validation of ${{ matrix.testcase }}
         run: |
           cd ${{ github.workspace }}/pandora/
-          ./pandora.py run -n 30 -p ptr,cf -c config-ci.ini --pandora-option PANDORA_EXPLORE_STACK_DEPTH=1500 ${{ github.workspace }}/sancus/${{ matrix.testcase }}/main.elf
+          ./pandora.py run -n 30 -p ptr,cf -c config-ci.ini --pandora-option PANDORA_EXPLORE_STACK_DEPTH=1500 ${{ github.workspace }}/pandora-examples/sancus/${{ matrix.testcase }}/main.elf
