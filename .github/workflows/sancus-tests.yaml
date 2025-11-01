@@ -40,7 +40,7 @@ jobs:
           repository: pandora-tee/pandora-examples
           sparse-checkout: |
             sancus/
-          path: ${{ github.workspace }}/pandora-examples/sancus/
+          path: ${{ github.workspace }}/pandora-examples/
       - name: Setup angr-platforms
         uses: actions/checkout@v5
         with:
