@@ -21,7 +21,7 @@ jobs:
           echo "::set-output name=matrix::$MATRIX"
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: matrix-gen
     strategy:
       fail-fast: false
