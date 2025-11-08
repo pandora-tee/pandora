@@ -116,8 +116,34 @@ $ ./venv/bin/pip3 install -r requirements.txt
 $ source ./venv/bin/activate
 (venv) $ ./pandora.py
 ```
+## Contributing
 
-## Source code overview
+### Linting and formatting
+We use [ruff](https://docs.astral.sh/ruff/) for linting and formatting. To check your code for linting errors, run:
+```bash
+$ ruff check
+```
+To automatically fix linting errors, run:
+
+```bash
+$ ruff check --fix
+```
+
+To format the code, run:
+
+```bash
+$ ruff format
+```
+
+### Pre-commit hooks
+We use [pre-commit](https://pre-commit.com/) to manage pre-commit hooks. To install the pre-commit hooks, run:
+
+```bash
+$ pre-commit install
+```
+This will ensure that the code is linted and formatted before each commit.
+
+### Source code overview
 
 Directory structure is organized as follows:
 
