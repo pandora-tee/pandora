@@ -44,18 +44,16 @@ all enclave mem writes support:
 
 PANDORA_EVENT_TYPES = {
     # Enclave events
-    'eenter',
-    'eexit',
-
+    "eenter",
+    "eexit",
     # Reads
-    'untrusted_mem_read',
-    'inside_or_outside_mem_read',
-    'trusted_mem_read',
-
+    "untrusted_mem_read",
+    "inside_or_outside_mem_read",
+    "trusted_mem_read",
     # Writes
-    'untrusted_mem_write',
-    'inside_or_outside_mem_write',
-    'trusted_mem_write',
+    "untrusted_mem_write",
+    "inside_or_outside_mem_write",
+    "trusted_mem_write",
 }
 PANDORA_INSPECT_ATTRIBUTES = {
     # Put additional attributes that may be Pandora-specific here

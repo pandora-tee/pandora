@@ -1,7 +1,7 @@
 import logging
 
-from angr.storage.memory_mixins.memory_mixin import MemoryMixin
 import claripy
+from angr.storage.memory_mixins.memory_mixin import MemoryMixin
 
 import ui.report
 from explorer.enclave import buffer_entirely_inside_enclave, buffer_touches_enclave
@@ -11,6 +11,7 @@ from ui.action_manager import ActionManager
 from ui.report import Reporter
 
 logger = logging.getLogger(__name__)
+
 
 class EnclaveMemoryFillerMixin(MemoryMixin):
     """
@@ -31,52 +32,47 @@ class EnclaveMemoryFillerMixin(MemoryMixin):
 
     def _default_value(self, addr, size, inspect=True, events=True, **kwargs):
         if type(addr) is not int:
-            raise RuntimeError(f'Unexpected {addr} not as an int at the bottom of mixins')
-        logger.debug(f'Uninitialized read for {addr:#x} (size={size} bytes)')
+            raise RuntimeError(f"Unexpected {addr} not as an int at the bottom of mixins")
+        logger.debug(f"Uninitialized read for {addr:#x} (size={size} bytes)")
 
         if SDKManager().addr_in_unmeasured_uninitialized_page(addr, size):
             # Address is in an unmeasured enclave page. Return a purely symbolic value
-            mem = get_tainted_mem_bits(self.state, size*8)
-            logger.log(logging.WARNING if inspect else logging.DEBUG, # If we are not inspecting, this is not an issue
-                       f'Buffer {addr:#x} (size {size}) lies within unmeasured memory! Returning tainted memory {str(mem)}.')
+            mem = get_tainted_mem_bits(self.state, size * 8)
+            logger.log(
+                logging.WARNING if inspect else logging.DEBUG,  # If we are not inspecting, this is not an issue
+                f"Buffer {addr:#x} (size {size}) lies within unmeasured memory! Returning tainted memory {str(mem)}.",
+            )
 
             if inspect:
                 # Only report this if we want to have the read inspected (i.e., disable if this is an internal load made on purpose).
-                info = 'Unmeasured memory read without prior initialization'
+                info = "Unmeasured memory read without prior initialization"
                 extra = {
-                    'Address': hex(addr),
-                    'Size (bytes)': size,
-                    'Description': f'Continued with tainted symbolic memory {str(mem)}',
+                    "Address": hex(addr),
+                    "Size (bytes)": size,
+                    "Description": f"Continued with tainted symbolic memory {str(mem)}",
                 }
-                Reporter().report(info,
-                                  self.state,
-                                  logger,
-                                  ui.report.SYSTEM_EVENTS_REPORT_NAME,
-                                  severity=logging.WARNING,
-                                  extra_info=extra
-                                  )
+                Reporter().report(info, self.state, logger, ui.report.SYSTEM_EVENTS_REPORT_NAME, severity=logging.WARNING, extra_info=extra)
                 # Trigger a user action if requested
-                ActionManager().actions['system'](info=info, state=self.state)
+                ActionManager().actions["system"](info=info, state=self.state)
 
             return mem
 
         if buffer_entirely_inside_enclave(self.state, addr, size):
-                # Address is in a measured page. Then, we actually want to treat this as zero
-                # TODO: Maybe taint as uninitialized?
-                mem = claripy.BVV(0, size * 8)
-                logger.debug(f'Buffer {addr:#x} (size {size}) lies in measured memory. Returning zero buffer {str(mem)}.')
-                return mem
+            # Address is in a measured page. Then, we actually want to treat this as zero
+            # TODO: Maybe taint as uninitialized?
+            mem = claripy.BVV(0, size * 8)
+            logger.debug(f"Buffer {addr:#x} (size {size}) lies in measured memory. Returning zero buffer {str(mem)}.")
+            return mem
         else:
             if buffer_touches_enclave(self.state, addr, size):
                 # Buffer is not _entirely_ inside the enclave but _touches_ the enclave. This is not good.
-                raise RuntimeError('Unexpected default called on buffer partially inside enclave')
+                raise RuntimeError("Unexpected default called on buffer partially inside enclave")
 
             else:
                 # This should technically never happen: The EnclaveAwareMixin
                 # should interrupt such calls and return a new tainted memory
                 # every time
-                mem = get_tainted_mem_bits(self.state, size*8)
-                logger.debug(
-                    f'Buffer {addr:#x} (size {size}) lies outside the enclave. Returning tainted memory {str(mem)}.')
+                mem = get_tainted_mem_bits(self.state, size * 8)
+                logger.debug(f"Buffer {addr:#x} (size {size}) lies outside the enclave. Returning tainted memory {str(mem)}.")
 
                 return mem

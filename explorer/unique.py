@@ -3,6 +3,7 @@ This file maintains all methods that are used to investigate whether an enclave 
 This is not only useful for enclave reentries to only reenter unique states that we did not enter already,
 but it will also be useful for pickling only those states that are worth keeping.
 """
+
 import itertools
 import logging
 
@@ -37,7 +38,7 @@ def get_mem_diffs(stash_list, reference_state):
     diff_sizes = {}
     for i in range(len(stash_list)):
         if i % 100 == 0:
-            logger.debug(f'Mem diff: Calculated {i} diffs. {len(stash_list) - i} still to go.')
+            logger.debug(f"Mem diff: Calculated {i} diffs. {len(stash_list) - i} still to go.")
         changed_bytes = list(reference_state.memory.changed_bytes(stash_list[i].memory))
         if len(changed_bytes) > 0:
             diff_str = str(list(reduce_list_to_ranges(changed_bytes)))
@@ -71,11 +72,11 @@ def get_unique_states(stash_list, reference_state, existing_uniques=None):
         existing_uniques = set()
 
     logger = logging.getLogger()
-    logger.debug('Unique state calculation. Generating memory difference buckets...')
+    logger.debug("Unique state calculation. Generating memory difference buckets...")
     # Split stash intp subgroups of specific changes based from reference state
     unique_state_list = existing_uniques.copy()
     mem_diffs = get_mem_diffs(stash_list, reference_state)
-    logger.debug(f'Mem diff bucket sizes: { [len(v) for v in mem_diffs.values()]}')
+    logger.debug(f"Mem diff bucket sizes: {[len(v) for v in mem_diffs.values()]}")
 
     # Next iterate through each bucket and only keep unique memory situations
     for changes_group in mem_diffs.values():
@@ -93,7 +94,7 @@ def get_unique_states(stash_list, reference_state, existing_uniques=None):
                 sub_group_sizes.append(1)
 
         unique_state_list.update(sub_uniques)
-        logger.debug(f'Current bucket had {len(sub_uniques)} unique states. Group sizes are {sub_group_sizes}')
+        logger.debug(f"Current bucket had {len(sub_uniques)} unique states. Group sizes are {sub_group_sizes}")
 
     # Return the unique set but without the old known uniques
     return unique_state_list - existing_uniques
