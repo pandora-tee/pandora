@@ -240,18 +240,9 @@ class SDKManager(metaclass=Singleton):
         if self.sdk is not None:
             base_addr = self.sdk.get_base_addr()
             if base_addr == -1:
-                if self.init_state is None:
-                    # We do not have an init state yet. There may be the option that we have an SDK that
-                    #  has a JSON Layout and may want to set the base addr before it exists.
-                    if issubclass(self.sdk, HasJSONLayout) and self.additional_args['json_file'] is not None:
-                        self.sdk.prepare_enclave_offset(self.additional_args['json_file'])
-                        # After this, call get_base_addr again
-                        base_addr = self.sdk.get_base_addr()
-                else:
-                    # We actually have an init state already. Use that:
-                    return self.init_state.project.loader.main_object.min_addr
+                # We should have an init state already. Use that:
+                base_addr = self.init_state.project.loader.main_object.min_addr
             return base_addr
-
         raise RuntimeError('SDK not initialized yet.')
 
     def get_enclave_range(self):
@@ -260,13 +251,25 @@ class SDKManager(metaclass=Singleton):
         else:
             raise RuntimeError('SDK not initialized yet.')
 
+    # Note:
+    #   - get_load_addr: called before SDK has been initialized to possibly relocate the _entire_ binary/blob
+    #   - get_base_addr: called after SDK has been initialized to locate enclave possibly _within_ the binary blob
     def get_load_addr(self):
         # MSP430 enclaves span a subpart of a larger static binary of the whole program memory
         # that does _not_ need to be relocated
         # SGX enclaves are shipped as relocatable shared libraries
         target_sdk = self.__get_sdk_class()
         if target_sdk is not None:
-            return target_sdk.get_load_addr()
+            load_addr = target_sdk.get_load_addr()
+            if load_addr == -1:
+                # We do not have an init state yet. There may be the option that we have an SDK that
+                #  has a JSON Layout and may want to set the base addr before it exists.
+                if issubclass(target_sdk, HasJSONLayout) and self.additional_args['json_file'] is not None:
+                    target_sdk.prepare_enclave_offset(self.additional_args['json_file'])
+                    # After this, call get_load_addr again
+                    load_addr = target_sdk.get_load_addr()
+                    assert(load_addr != -1)
+            return load_addr
         else:
             raise RuntimeError('SDK not initialized yet.')
         

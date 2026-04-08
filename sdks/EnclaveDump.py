@@ -155,12 +155,12 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
     def get_secs(self):
         return self.secs
 
+    def get_base_addr(self):
+        return MEMORY_DUMP_BASE_ADDRESS
+
     @staticmethod
     def get_load_addr():
         return MEMORY_DUMP_BASE_ADDRESS
-
-    def get_base_addr(self):
-        EnclaveDump.get_load_addr()
 
     @staticmethod
     def get_angr_backend():
@@ -180,7 +180,7 @@ class EnclaveDump(AbstractSGXSDK, HasJSONLayout):
         for entry in json_list:
             if entry['entry_type'] == 0:
                 MEMORY_DUMP_BASE_ADDRESS = entry['base']
-                logger.info(f'Prepared base address for enclave based on JSON Layout. Base addr is now {MEMORY_DUMP_BASE_ADDRESS}')
+                logger.info(f'Prepared base address for enclave based on JSON Layout. Base addr is now {MEMORY_DUMP_BASE_ADDRESS:#x}')
                 break
 
         if MEMORY_DUMP_BASE_ADDRESS == -1:
