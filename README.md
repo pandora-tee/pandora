@@ -1,14 +1,10 @@
-[![DOI](https://zenodo.org/badge/730332035.svg)](https://zenodo.org/doi/10.5281/zenodo.10390330)
+# Pandora: Principled Symbolic Validation of Enclave Runtimes
 
-# Pandora
+Pandora is a symbolic execution tool designed for *truthful* validation of enclave shielding runtimes across diverse TEE architectures. Built on the fabulous [angr](https://angr.io/) framework, Pandora extends it with enclave-aware semantics such as enclave loading, a powerful symbolic memory model to support enclaves in a shared address space, principled taint tracking, human-readable HTML report generation, and a suite of vulnerability detection plugins.
 
-Pandora is a symbolic execution tool designed for *truthful* validation of Intel SGX enclave shielding runtimes. Pandora is based on the fabulous [angr](https://angr.io/) and extends it with enclave semantics such as Intel SGX instruction support, a realistic enclave memory view, attacker taint tracking, and report generation for a set of powerful vulnerability plugins.
+Originally developed for Intel SGX ([:page_facing_up: IEEE S&P'24 paper](https://vanbulck.net/files/oakland24-pandora.pdf)), Pandora's core infrastructure has since been generalized into a TEE-agnostic base, with support extended to the Sancus ([:page_facing_up: SysTEX'25 paper](https://vanbulck.net/files/systex25-pandora-sancus.pdf)) and openIPE ([:page_facing_up: EuroS&P'25 paper](https://vanbulck.net/files/eurosp25-openipe.pdf)) enclave architectures.
 
-Pandora is the result of our research publication [you can read here](https://falder.org/files/paper/2024_pandora.pdf) and is published at the 45th IEEE Symposium on Security and Privacy (IEEE S&P 2024). It should be cited as:
-
-> Alder, F., Daniel, L. A., Oswald, D., Piessens, F., & Van Bulck, J. (2024, May). Pandora: Principled Symbolic Validation of Intel SGX Enclave Runtimes. In 45th IEEE Symposium on Security and Privacy-IEEE S&P 2024. IEEE.
-
-Bibtex:
+If you use Pandora, please cite: 
 
 ```
 @inproceedings{alder2024pandora,
@@ -20,13 +16,24 @@ Bibtex:
 }
 ```
 
-This repository is the research artifact and can also be cited (check GitHub citation).
-
 ## Quickstart
 
-```bash
-pip3 install -r requirements.txt
+To install and run Pandora in a Python virtual environment:
 
+```bash
+# create Python virtual environment
+$ python3 -m venv venv && source ./venv/bin/activate
+
+# install dependencies in virtual environment
+$ python3 -m pip install -r requirements.txt
+
+# now run pandora
+(venv) $ ./pandora.py
+```
+
+## Example Usage
+
+```bash
 # Good CLI hopefully makes it easy for you to get started
 ./pandora.py --help
 
@@ -100,21 +107,12 @@ In rare cases, Pandora experiences segmentation faults or Z3 issues due to insta
 
 For us, these issues occur very rarely, and happen non-deterministically. Often, re-running the same binary right away avoids a crash. On some machines, these errors seem to happen more often than on others, and for those machines, we had success in updating the Z3 Python package: `pip install --upgrade z3-solver`.
 
-### Installation and updating
+## Installation and updating
 
 To install or update, run pip on the requirements script:
 
 ```bash
 pip3 install -r requirements.txt --upgrade --upgrade-strategy='eager'
-```
-
-Alternatively, to install and run Pandora in a Python virtual environment:
-
-```bash
-$ sudo python3 -m venv venv
-$ ./venv/bin/pip3 install -r requirements.txt
-$ source ./venv/bin/activate
-(venv) $ ./pandora.py
 ```
 
 ## Source code overview
