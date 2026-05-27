@@ -50,7 +50,7 @@ class SymbolManager(metaclass=Singleton):
 
         output = "\n".join(
             line for line in self.objdump.splitlines()
-            if (match := address_pattern.match(line)) and start <= int(match.group(1), 16) <= end
+            if (match := address_pattern.match(line)) and start <= int(match.group(1), 16) < end
         ) + "\n"
         return output
 
