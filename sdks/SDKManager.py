@@ -54,7 +54,7 @@ class SDKManager(metaclass=Singleton):
             # reduce SDK candidates based on machine architecture in ELF file
             self.target_arch = self.executable_object.header.e_machine.replace('EM_', '').lower()
             if self.target_arch not in SDKS.keys():
-                logger.error(ui.log_format.format_error(f'Detected {elf_arch}: Unsupported architecture!'))
+                logger.error(ui.log_format.format_error(f'Detected {self.target_arch}: Unsupported architecture!'))
                 exit(1)
             
             if self.target_arch == 'msp430':
