@@ -107,12 +107,15 @@ In rare cases, Pandora experiences segmentation faults or Z3 issues due to insta
 
 For us, these issues occur very rarely, and happen non-deterministically. Often, re-running the same binary right away avoids a crash. On some machines, these errors seem to happen more often than on others, and for those machines, we had success in updating the Z3 Python package: `pip install --upgrade z3-solver`.
 
-## Installation and updating
+## Updating dependencies
 
-To install or update, run pip on the requirements script:
+To generate an updated `requirements.txt` from within the virtual environment:
 
 ```bash
-pip3 install -r requirements.txt --upgrade --upgrade-strategy='eager'
+$ ./venv/bin/pip list --outdated
+$ ./venv/bin/pip install pip-review
+$ ./venv/bin/pip-review --auto
+$ ./venv/bin/pip freeze > requirements.txt
 ```
 
 ## Source code overview
