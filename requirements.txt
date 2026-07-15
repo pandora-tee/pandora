@@ -92,3 +92,4 @@ unicorn==2.1.4
 unique_log_filter==0.1.0
 wcwidth==0.7.0
 z3-solver==4.13.0.0
+parsimonious==0.11.0

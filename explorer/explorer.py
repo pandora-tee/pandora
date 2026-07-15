@@ -24,6 +24,8 @@ from .techniques.PandoraDFS import PandoraDFS
 from .techniques.PandoraLoopSeer import PandoraLoopSeer
 from .techniques.TraceLogger import TraceLogger
 
+from Scase import ScasePluginManager
+
 logger = logging.getLogger(__name__)
 
 class AbstractExplorer(metaclass=Singleton):
@@ -163,6 +165,10 @@ class AbstractExplorer(metaclass=Singleton):
         return s
 
 class BasicBlockExplorer(AbstractExplorer):
+    def __init__(self, scase_manager=None, binary_path='', action=UserAction.NONE, base_addr=0, angr_backend='elf', angr_arch='x86_64'):
+        self.scase_manager = scase_manager
+        return super().__init__(binary_path, action, base_addr, angr_backend, angr_arch)
+    
 
     def _init_simgr(self):
         if not self.simgr:
@@ -212,7 +218,7 @@ class BasicBlockExplorer(AbstractExplorer):
                     user_action=ActionManager().actions['reentry'])
             )
 
-    def make_step(self):
+    def make_step(self, step_size=1):
         if not self.simgr:
             self._init_simgr()
 
@@ -228,8 +234,16 @@ class BasicBlockExplorer(AbstractExplorer):
         # Move states where the enclave has disabled protections (sancus_disable / 0x1380)
         self.simgr.move(from_stash='active', to_stash='deadended', filter_func=lambda s: s.globals['protections_disabled'] is True)
 
+        if self.scase_manager:
+            for scase_plugin_name in self.scase_manager.active_plugins:
+                logger.debug(f"Going through scase plugin {scase_plugin_name} to prune")
+                self.scase_manager.active_plugins[scase_plugin_name].prune_states(step_size, self.simgr)
+
         # Do the step
-        self.simgr.step()
+        if not step_size:
+            self.simgr.step()
+        else:
+            self.simgr.step(num_inst=step_size)
 
         # Return whether we have exhausted all states and the errored list
         states_exhausted = len(self.simgr.active) == 0
